@@ -1,11 +1,10 @@
-# Lá Chắn · v1.0.0
+# LoginGuard
+
+Phiên bản 1.0.0
 
 Kho tài khoản và bảng theo dõi bảo mật của Nhóm 5, học phần Nhập môn ngành và Kỹ năng mềm tại VKU. Bản này là web mẫu dùng dữ liệu soạn sẵn, không lưu mật khẩu thật.
 
-## Hai trang
-
-- `index.html`: trang giới thiệu, dựng theo quy trình đầy đủ của Taste Skill 2.5.1. Trang có các phần mở đầu, kho tài khoản, cách lưu, 4 mục kiểm tra, câu "Mỗi tài khoản một mật khẩu", câu hỏi thường gặp và chân trang. Nút **Thử bản minh họa** mở trang thứ hai.
-- `app.html`: ứng dụng minh họa 4 màn hình Tổng quan, Kho tài khoản, Kiểm tra bảo mật và Cảnh báo. Dữ liệu dùng chung 10 tài khoản mẫu với trang giới thiệu. Liên kết **Trang giới thiệu** ở thanh bên đưa về `index.html`.
+Mở [LoginGuard trên GitHub Pages](https://nktu32-ux.github.io/bao-ve-tai-khoan/app.html). Bốn mục Tổng quan, Kho tài khoản, Kiểm tra bảo mật và Cảnh báo nằm trong cùng trang `app.html`.
 
 ## Luồng trình bày trong app.html
 
@@ -17,7 +16,7 @@ Kho tài khoản và bảng theo dõi bảo mật của Nhóm 5, học phần Nh
 
 ## Cách mở
 
-- **Mở file trực tiếp:** bấm đúp `index.html`. Chữ và bố cục hiện đủ, nhưng trình duyệt không chạy được các module JavaScript từ file. Vì vậy các mảnh giao diện chuyển động, sơ đồ và hiệu ứng nền sẽ đứng yên hoặc trống.
+- **Mở file trực tiếp:** bấm đúp `app.html`. Các thao tác với dữ liệu mẫu chạy được, một số hiệu ứng chỉ bật khi mở qua HTTP.
 - **Qua HTTP (nên dùng):** đăng lên GitHub Pages, hoặc chạy lệnh dưới đây trong Terminal trên máy:
 
 ```bash
@@ -25,7 +24,7 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory /home/beth/t3code/doan1
 ```
 
 - `python3 -m http.server` chạy máy chủ web tĩnh có sẵn trong Python. Lệnh chỉ đọc file để gửi cho trình duyệt, không sửa file và không cài gì thêm.
-- `8000` là cổng. Địa chỉ mở trong trình duyệt là http://127.0.0.1:8000.
+- `8000` là cổng. Địa chỉ mở trong trình duyệt là http://127.0.0.1:8000/app.html.
 - `--bind 127.0.0.1` chỉ cho chính máy của bạn truy cập, máy khác trong mạng không vào được.
 - `--directory ...` là thư mục chứa web, nên bạn chạy lệnh ở thư mục nào cũng được. Dấu `/` ở đầu đường dẫn nghĩa là tính từ gốc ổ đĩa.
 
@@ -42,7 +41,6 @@ Bản 1.0.0 trình bày giao diện và luồng thao tác bằng dữ liệu gi�
 
 ## Thành phần và giấy phép
 
-- Bộ kit Taste Skill (CSS, JavaScript, mảnh giao diện, sơ đồ, hiệu ứng `silk-folds` và `fluted-glass`, moment `letters-assemble`) giữ nguyên, không sửa. Giấy phép MIT nằm ở `assets/Taste-LICENSE`.
-- `app.html` dùng bản sao cũ của Taste trong `assets/taste/`.
+- `app.html` dùng CSS, JavaScript và hiệu ứng của Taste Skill trong `assets/taste/`. Giấy phép MIT nằm ở `assets/Taste-LICENSE`.
 - Font Geist và Geist Mono được lưu trên máy, có chữ tiếng Việt, giấy phép SIL OFL trong `assets/fonts/`.
 - Logo dịch vụ lấy từ bộ SVG Logos (CC0), biểu tượng giao diện lấy từ Lucide (ISC). Nguồn từng file ghi ở `assets/icons/icons-credits.json`. Tên và logo dịch vụ thuộc về chủ sở hữu.

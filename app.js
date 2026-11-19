@@ -206,7 +206,7 @@ function updateRoute(moveFocus = false) {
   }
   for (const view of document.querySelectorAll(".view")) view.hidden = view.id !== route;
   select("#breadcrumb").textContent = titles[route];
-  document.title = "Lá Chắn · " + titles[route];
+  document.title = "LoginGuard · " + titles[route];
   if (moveFocus) {
     select("#" + route + " h1").focus({ preventScroll: true });
     window.scrollTo(0, 0);
@@ -274,7 +274,7 @@ function showDetail(id, preserveReveal = false) {
 }
 
 function showAbout() {
-  openDialog("Về Lá Chắn", `
+  openDialog("Về LoginGuard", `
     <p>Phiên bản 1.0.0 · Nhóm 5 · Trường Đại học Công nghệ Thông tin và Truyền thông Việt – Hàn.</p>
     <p>Ứng dụng hiện dùng tài khoản và bản tin có sẵn để trình bày luồng bảo mật. Các thao tác chỉ thay đổi dữ liệu mẫu trong phiên và được đặt lại khi tải lại trang.</p>
     <p>Thiết kế sản phẩm dự kiến dùng tiện ích xin phép người dùng khi đăng nhập, kho mã hóa và AI đọc thông báo công khai từ các dịch vụ. Trang này chỉ cung cấp luồng mô phỏng cho những phần đó.</p>
