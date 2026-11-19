@@ -1,553 +1,170 @@
 <!doctype html>
-<html lang="vi" data-type="software" data-radius="round" data-ground="sage" data-buttons="solid" data-motion>
+<html lang="vi" data-type="software" data-radius="soft" data-ground="sky" data-motion="live">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Lá Chắn: kho mật khẩu cho sinh viên</title>
-<meta name="description" content="Lá Chắn lưu tài khoản khi bạn đồng ý, rồi chỉ ra tài khoản cần xử lý trước: dính sự cố, dùng chung mật khẩu, mật khẩu ngắn hoặc 2FA chưa rõ.">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Lá Chắn: kho mật khẩu cho sinh viên">
-<meta property="og:description" content="Lưu tài khoản khi bạn đồng ý và biết tài khoản nào cần đổi mật khẩu trước.">
-<meta property="og:image" content="share.jpg">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#eef0f3">
-<link rel="canonical" href="https://nktu32-ux.github.io/bao-ve-tai-khoan/">
-<meta name="site-kind" content="software">
-<meta name="page-type" content="software">
-<!-- Geist + Geist Mono (start.mjs css --type geist), the same Google Fonts files kept in assets/fonts with their Vietnamese subset -->
-<link rel="stylesheet" href="assets/fonts/fonts.css">
-<link rel="stylesheet" href="assets/system.css">
-<link rel="stylesheet" href="assets/ui/cards.css">
-<link rel="stylesheet" href="assets/motion/motion.css">
-<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
-<link rel="stylesheet" href="assets/layout/layout.css">
-<link rel="stylesheet" href="assets/icons/icon.css">
-<style>
-:root {
-  --p-bg: #eef0f3; --p-surface: #e2e5ea; --p-ink: #0b0c0e; --p-muted: #5d6470;
-  --p-accent: #1f2de6; --p-accent-ink: #ffffff; --p-action: #1f2de6; --p-action-ink: #ffffff;
-  --p-inv-bg: #0b0c0e; --p-inv-surface: #17181a; --p-inv-ink: #eef0f3; --p-inv-muted: #8e8f92;
-  --p-inv-accent: #eef0f3; --p-inv-accent-ink: #0b0c0e; --p-inv-action: #eef0f3; --p-inv-action-ink: #0b0c0e;
-  --font-display: "Geist", system-ui, sans-serif;
-  --font-text: "Geist", system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --display-weight: 500;
-  --display-tracking: -0.035em;
-  --display-tracking-xl: -0.045em;
-}
-</style>
-<link rel="stylesheet" href="assets/ui/base.css">
-<link rel="stylesheet" href="assets/ui/doc/fragment.css">
-<link rel="stylesheet" href="assets/ui/window/fragment.css">
-<link rel="stylesheet" href="assets/ui/checklist/fragment.css">
-<link rel="stylesheet" href="assets/ui/cursor/fragment.css">
-<link rel="stylesheet" href="assets/ui/toggles/fragment.css">
-<link rel="stylesheet" href="assets/diagrams/diagram.css">
-<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
-<script src="assets/backgrounds/backgrounds.js"></script>
-<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
-<link rel="modulepreload" href="assets/moments/moments.js">
-<link rel="modulepreload" href="assets/moments/lib.js">
-<link rel="modulepreload" href="assets/moments/letters-assemble/moment.js">
-<style>
-  /* page CSS: only what sits inside a visual, and one --p-h for the card group */
-  #kiem-tra .panel { --p-h: 336px; }
-  @media (min-width: 1024px) and (max-width: 1279px) { #kiem-tra .panel { --p-h: 320px; } }
-  @media (min-width: 640px) and (max-width: 1023px) and (orientation: portrait) { #kiem-tra .panel { --p-h: 440px; } }
-  @media (max-width: 639px) { #kiem-tra .panel { --p-h: 170px; } }
-  /* the questions: one screen from a tablet up, two on a phone (five answers stack taller than one) */
-  @media (max-width: 639px) { #cau-hoi { --g-screen: 200lvh; } }
-  /* the hero's page on a tablet takes the frame's width, with even ground at both sides */
-  @media (max-width: 1023px) {
-    .hero__media .stage > .at-corner { right: 40px; }
-    .hero__media .ui-doc { width: 100%; }
-  }
-  /* the nav menu opens a card of the checks: land under the fixed bar */
-  #kiem-tra .card { scroll-margin-top: calc(var(--nav) + var(--s-6)); }
-
-  /* the hero's picture stands on the page's lit ground (layout.css gives .hero__media the surface) */
-  .hero__media.frame--lit { background: var(--ground-bg); }
-  .hero__media .ui-doc { width: 500px; }
-  /* a phone's frame is too narrow for the note beside the page: the marked phrase stands alone */
-  @media (max-width: 639px) { .hero__media .ui-doc__note { display: none; } }
-
-  /* app-frame (sections-library.md, app-frame: the whole recipe) */
-  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
-  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
-  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
-  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
-  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
-  @media (max-width: 1023px) {
-    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-    .app > .app__pane--list { max-height: 252px; }
-    .app > .app__pane--list::after { display: none; }
-    .app .ui-win__side { display: none; }
-    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
-    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
-  }
-  @media (max-width: 639px) {
-    .app.ui { grid-template-rows: minmax(0, 1fr); }
-    .app > .app__pane--list { display: none; }
-    .app > .app__pane + .app__pane { border-top: 0; }
-  }
-
-  /* a service's real logo on a light tile, in the window rows */
-  .lc-logo { background: var(--u-tile); box-shadow: var(--u-tile-edge); border-radius: 7px; }
-  .lc-logo img { width: 15px; height: 15px; }
-
-  /* the open account in the app frame, laid out from Lá Chắn's own account screen */
-  .lc-acc { padding: 20px 24px 32px; display: grid; gap: 20px; align-content: start; }
-  .lc-acc__head { display: flex; align-items: center; gap: 12px; }
-  .lc-acc__head .ui-title { font-size: 15px; }
-  .lc-acc__sub { font-size: 13px; color: var(--u-muted); }
-  .lc-acc__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-  .lc-acc__list { margin: 0; padding: 0; list-style: none; display: grid; }
-  .lc-acc__list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 40px; font-size: 13px; line-height: 16px; border-bottom: 1px solid var(--u-line); }
-  .lc-acc__list > li > span:first-child { color: var(--u-muted); }
-  .lc-acc__list b { font-weight: 500; color: var(--u-ink); }
-  .lc-acc__mask { letter-spacing: 0.12em; }
-  .lc-acc__cols .ui-checks { width: 100%; }
-  .lc-acc__side { display: grid; gap: 16px; }
-  .lc-acc__ai { padding: 14px 16px; border-radius: var(--u-r2); background: var(--u-fill); box-shadow: inset 0 0 0 1px var(--u-line); display: grid; gap: 6px; }
-  .lc-acc__ai p { margin: 0; font-size: 13px; line-height: 20px; color: var(--u-ink); }
-  .lc-acc__label { font-size: 13px; line-height: 16px; font-weight: 500; color: var(--u-ink); }
-  .lc-acc__ai .lc-acc__src { color: var(--u-muted); }
-  @media (max-width: 1279px) { .lc-acc__cols { grid-template-columns: minmax(0, 1fr); } }
-
-  /* the statement moment's letters start scattered: they stay inside their own section */
-  #mot-mat-khau { overflow: clip; }
-  /* the statement's lines under it are text people read: the ink */
-  #mot-mat-khau .mo-la__sub { color: var(--ink); }
-  /* the mocks' quietest text at 4.5:1 on their own surface */
-  .ui { --u-soft: var(--u-muted); }
-  /* #luu: the dialog lies over the window's lower-right corner; below 1024 the window shows alone, as the hero frames do */
-  @media (max-width: 1023px) { #luu .stage > .at-over { display: none; } }
-  .lc-skip { font-size: 13px; line-height: 16px; font-weight: 500; color: var(--u-muted); }
-  /* the credits line in the page's language (system.css writes "Credits" and "Hide") */
-  .credits > summary::after { content: "Xem nguồn"; }
-  .credits[open] > summary::after { content: "Ẩn"; }
-
-  /* a phone shows the first rows of each list; the rest would only run on, cut, under the next card */
-  @media (max-width: 639px) {
-    :is(#luu, #dung-lai) .ui-win__row:nth-child(n + 6), #hai-yeu-to .ui-tg:nth-child(n + 5) { display: none; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="page-type" content="software">
+  <meta name="site-kind" content="software">
+  <meta name="theme-color" content="#0a0d14">
+  <meta name="description" content="Kho tài khoản, kiểm tra mật khẩu và theo dõi cảnh báo bảo mật của Nhóm 5.">
+  <meta property="og:title" content="LoginGuard · Kho tài khoản">
+  <meta property="og:description" content="Quản lý tài khoản và biết việc bảo mật nào cần xử lý.">
+  <title>LoginGuard · Kho tài khoản</title>
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="assets/taste/system.css">
+  <link rel="stylesheet" href="assets/taste/motion.css">
+  <link rel="stylesheet" href="app.css">
+  <template id="taste-preload">
+    <link rel="modulepreload" href="assets/taste/moments/moments.js">
+    <link rel="modulepreload" href="assets/taste/moments/lib.js">
+    <link rel="modulepreload" href="assets/taste/moments/counter-rolls/moment.js">
+  </template>
+  <script>
+    if (location.protocol !== "file:") {
+      document.head.append(document.getElementById("taste-preload").content.cloneNode(true));
+      document.documentElement.classList.add('m-enter');
+      document.documentElement.classList.add('mo-js');
+      setTimeout(() => document.documentElement.classList.add('m-enter-done'), 700);
+      setTimeout(() => document.documentElement.classList.add('mo-safe'), 2500);
+    }
+  </script>
+  <script type="module">
+    if (location.protocol !== "file:") {
+      import("./assets/taste/moments/moments.js").catch(() => {
+        document.documentElement.classList.add("mo-safe");
+      });
+    }
+  </script>
+  <script defer src="app.js"></script>
+  <script defer src="assets/taste-app.js"></script>
 </head>
 <body>
-<!-- type: software
-     deal: hero split, nav nav-centre, close close-type, footer footer-columns, rhythm surface-pairs (#kiem-tra), buttons solid,
-           mark dots, grounds bg-halo (hero) and bg-band (#cau-hoi), lit ground sage; palette cool-grey-cobalt; type geist; radius round
-     effect: silk-folds in the [data-visual] frame of #luu; card grounds: fluted-glass in #kiem-tra
-     moments: letters-assemble in #mot-mat-khau (the one habit the page asks people to drop, built letter by letter)
-     motion: hero entrance (the name, then what to do); the doc's two marks in the hero; the open account's checklist in #kho;
-             the lanes diagram's pulse in #kiem-tra (the card group's one loop); hover on every link, button and card -->
-
-<header class="nav nav--centre">
-  <div class="wrap nav__bar">
-    <a class="skip-link" href="#top">Đến nội dung chính</a>
-    <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>Lá Chắn</a>
-    <nav class="nav__links" aria-label="Điều hướng chính">
-      <div class="nav__item"><a class="nav__link" href="#kho">Kho</a></div>
-      <div class="nav__item"><a class="nav__link" href="#luu">Cách lưu</a></div>
-      <div class="nav__item">
-        <a class="nav__link" href="#kiem-tra">Kiểm tra <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-        <div class="nav__menu">
-          <div class="wrap grid">
-            <div class="menu-col span-3">
-              <p class="t-label">Tài khoản</p>
-              <a href="#su-co">Sự cố ở dịch vụ<span>Theo bản tin công khai</span></a>
-              <a href="#hai-yeu-to">Ghi nhận 2FA<span>Xác thực hai yếu tố</span></a>
-            </div>
-            <div class="menu-col span-3">
-              <p class="t-label">Mật khẩu</p>
-              <a href="#dung-lai">Mật khẩu dùng lại<span>Tài khoản dùng chung</span></a>
-              <a href="#mat-khau-yeu">Mật khẩu ngắn<span>Dưới 14 ký tự</span></a>
-            </div>
-          </div>
-        </div>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-overview" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-vault" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 20v2m8-2v2m-5-10h2"/><circle cx="12" cy="12" r="4"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 4.5 4.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.5 2.8 18a1.5 1.5 0 0 0 1.3 2h15.8a1.5 1.5 0 0 0 1.3-2L13.7 4.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 3h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 8a8 8 0 1 0 1 7m-1-11v5h-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+  <a class="skip" href="#main">Bỏ qua điều hướng</a>
+  <div class="app-frame">
+    <aside class="sidebar">
+      <a class="brand" href="#tong-quan">
+        <span class="brand-mark"><svg class="icon"><use href="#i-shield"/></svg></span>
+        <span>LoginGuard<small>Bảo vệ tài khoản</small></span>
+      </a>
+      <nav aria-label="Điều hướng chính">
+        <a href="#tong-quan" data-route="tong-quan"><svg class="icon"><use href="#i-overview"/></svg><span>Tổng quan</span></a>
+        <a href="#kho-tai-khoan" data-route="kho-tai-khoan"><svg class="icon"><use href="#i-vault"/></svg><span>Kho tài khoản</span></a>
+        <a href="#kiem-tra" data-route="kiem-tra"><svg class="icon"><use href="#i-shield"/></svg><span>Kiểm tra bảo mật</span></a>
+        <a href="#canh-bao" data-route="canh-bao"><svg class="icon"><use href="#i-bell"/></svg><span>Cảnh báo</span><span class="nav-count" data-unread hidden></span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="about-button" type="button" data-action="about"><svg class="icon"><use href="#i-info"/></svg> Về ứng dụng</button>
+        <div class="project"><span class="avatar">N5</span><span>Nhóm 5 · VKU<small>Phiên bản 1.0.0</small></span></div>
       </div>
-      <div class="nav__item"><a class="nav__link" href="#cau-hoi">Câu hỏi</a></div>
-    </nav>
-    <div class="nav__actions">
-      <a class="btn btn--primary" href="app.html">Thử bản minh họa</a>
-    </div>
-    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Mở menu">
-      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-    </button>
+    </aside>
+    <main id="main" tabindex="-1">
+      <header class="topbar">
+        <div class="breadcrumb"><span class="breadcrumb-root">LoginGuard</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg><span id="breadcrumb">Tổng quan</span></div>
+        <button class="btn btn--primary" type="button" data-action="login"><svg class="icon"><use href="#i-plus"/></svg> Mô phỏng đăng nhập</button>
+      </header>
+      <noscript><p class="empty">Hãy bật JavaScript trong trình duyệt để dùng LoginGuard.</p></noscript>
+      <div class="workspace wrap">
+        <section class="view" id="tong-quan" aria-labelledby="title-overview">
+          <section class="hero" data-enter aria-labelledby="title-overview">
+            <div class="hero-grain" data-fx="grain-gradient" data-fx-seed="37"
+                 data-fx-params='{"speed":0.18,"grain":0.34,"grainMotion":0,"tint":0.23,"calm":0.9,"calmX":0.22}'
+                 data-fx-palette='{"bg":"#101927","surface":"#142840","ink":"#e9edf3","accent":"#5ab9fc"}' aria-hidden="true"></div>
+            <div class="hero-copy">
+              <p class="hero-kicker"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg> Tổng quan</p>
+              <h1 id="title-overview" tabindex="-1">Bảo mật tài khoản</h1>
+              <p id="hero-title"></p>
+              <p id="hero-copy"></p>
+              <a class="btn btn--primary" href="#kiem-tra">Xem việc cần làm <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            </div>
+            <div class="hero-visual" data-enter-media>
+              <div class="coverage-dial" aria-hidden="true">
+                <div id="coverage-ring" class="coverage-ring"></div>
+                <div class="coverage-dial-label">
+                  <svg class="icon"><use href="#i-shield"/></svg>
+                  <strong id="coverage-ratio"></strong>
+                </div>
+              </div>
+              <div class="coverage-legend">
+                <p class="coverage-heading">Kết quả kiểm tra</p>
+                <p><i class="legend-dot legend-clear"></i><span>Đạt kiểm tra</span><strong id="coverage-clear"></strong></p>
+                <p><i class="legend-dot legend-review"></i><span>Cần xem lại</span><strong id="coverage-review"></strong></p>
+              </div>
+            </div>
+          </section>
+          <div class="metrics" id="metrics" data-moment="counter-rolls" data-moment-opts='{"duration":950,"stagger":70}'></div>
+          <div class="overview-grid">
+            <section class="panel" aria-labelledby="recent-title">
+              <div class="panel-heading">
+                <h2 id="recent-title">Tài khoản gần đây</h2>
+                <a class="text-link" href="#kho-tai-khoan">Xem kho <svg class="icon"><use href="#i-arrow"/></svg></a>
+              </div>
+              <div class="row-labels" aria-hidden="true"><span>Tài khoản</span><span>Trạng thái</span></div>
+              <div id="recent-accounts"></div>
+            </section>
+            <section class="panel spotlight" aria-labelledby="spotlight-title">
+              <div class="panel-heading"><h2 id="spotlight-title">Cảnh báo gần nhất</h2><svg class="icon spotlight-icon" aria-hidden="true"><use href="#i-bell"/></svg></div>
+              <div class="spotlight-body">
+                <span class="badge tone-risk"><svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg> Rò rỉ mật khẩu mẫu</span>
+                <span class="incident-status" id="spotlight-status"></span>
+                <h3>Diễn đàn Sinh viên</h3>
+                <p>Thông báo tình huống ghi nhận mật khẩu của một số tài khoản bị lộ.</p>
+                <a class="text-link" href="#canh-bao">Xem cảnh báo <svg class="icon"><use href="#i-arrow"/></svg></a>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section class="view" id="kho-tai-khoan" aria-labelledby="title-vault" hidden>
+          <div class="page-heading"><h1 id="title-vault" tabindex="-1">Kho tài khoản</h1><p>Xem thông tin đăng nhập và trạng thái của các tài khoản đã lưu.</p></div>
+          <div class="panel">
+            <div class="vault-toolbar">
+              <label class="search"><svg class="icon"><use href="#i-search"/></svg><input id="vault-search" type="search" aria-label="Tìm tài khoản" placeholder="Tìm dịch vụ hoặc tên đăng nhập"></label>
+              <label class="filter"><span class="sr-only">Lọc tài khoản</span><select id="vault-filter">
+                <option value="all">Tất cả trạng thái</option><option value="review">Cần kiểm tra</option><option value="clear">Không có việc cần làm</option>
+              </select></label>
+            </div>
+            <p class="result-count" id="vault-count" aria-live="polite"></p>
+            <div class="row-labels" aria-hidden="true"><span>Tài khoản</span><span>Trạng thái</span></div>
+            <div id="vault-accounts"></div>
+          </div>
+        </section>
+        <section class="view" id="kiem-tra" aria-labelledby="title-health" hidden>
+          <div class="page-heading"><h1 id="title-health" tabindex="-1">Kiểm tra bảo mật</h1><p>Ưu tiên tài khoản liên quan đến sự cố, rồi xem mật khẩu và xác thực hai yếu tố.</p></div>
+          <div class="checks" id="security-checks"></div>
+        </section>
+        <section class="view" id="canh-bao" aria-labelledby="title-alerts" hidden>
+          <div class="page-heading"><h1 id="title-alerts" tabindex="-1">Cảnh báo</h1><p>Xem sự cố ở dịch vụ đã lưu và các bước xử lý được đề xuất.</p></div>
+          <div id="alerts-content"></div>
+        </section>
+      </div>
+      <footer class="main-footer">LoginGuard · Nhóm 5 · VKU</footer>
+    </main>
   </div>
-</header>
-
-<main id="top">
-  <section class="hero hero--split bg-halo" data-enter aria-labelledby="hero-h">
-    <div class="wrap"><div class="hero-text grid hero__grid">
-      <div class="hero__text span-5">
-        <p class="hero__kicker">Bản minh họa 1.0.0, chạy trên trình duyệt</p>
-        <h1 id="hero-h">Kho mật khẩu cho sinh viên</h1>
-        <p class="hero__lead">Lá Chắn hỏi trước khi lưu tài khoản, rồi kiểm tra 4 việc: sự cố ở dịch vụ, mật khẩu dùng lại, mật khẩu ngắn và xác thực hai yếu tố.</p>
-        <div class="btn-row">
-          <a class="btn btn--primary" href="app.html">Thử bản minh họa<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
-          <a class="btn btn--secondary" href="#kiem-tra">Xem cách kiểm tra</a>
-        </div>
-      </div>
-      <div class="hero__media frame frame--lit span-6 start-7" role="img" aria-label="Lá Chắn mở bản tin rò rỉ công khai của Diễn đàn Sinh viên, đánh dấu câu về mật khẩu bị lộ và ghi chú rằng tài khoản trong kho dùng chung mật khẩu với Facebook">
-        <div class="stage stage--fade-b">
-          <div class="at-corner to-edge" style="--ax:40px;--ay:48px" data-ui-loop>
-            <div class="ui ui-doc" data-ui="doc">
-              <article class="ui-doc__page">
-                <div class="ui-doc__label">Bản tin công khai · Diễn đàn Sinh viên</div>
-                <div class="ui-doc__title">Thông báo về sự cố lộ dữ liệu tài khoản</div>
-                <div class="ui-doc__text">Diễn đàn phát hiện một bản sao dữ liệu tài khoản bị truy cập trái phép. <mark class="ui-doc__mark is-on">Mật khẩu của một số tài khoản</mark> có thể đã bị lộ.</div>
-                <div class="ui-doc__text">Diễn đàn đã đăng xuất mọi phiên đăng nhập. <mark class="ui-doc__mark" data-kind="Việc cần làm" data-msg="Đổi mật khẩu diễn đàn, rồi đổi mật khẩu Facebook." data-where="Tóm tắt của Lá Chắn">Người dùng nên đổi mật khẩu</mark>, nhất là khi dùng lại mật khẩu này ở trang khác.</div>
-                <div class="ui-doc__text">Thư điện tử và số điện thoại chưa có dấu hiệu bị lộ. Diễn đàn sẽ cập nhật bản tin khi có kết quả kiểm tra.</div>
-                <div class="ui-doc__title">Việc người dùng nên làm</div>
-                <div class="ui-doc__text">1. Đăng nhập lại và đổi mật khẩu trong mục Tài khoản, phần Bảo mật.</div>
-                <div class="ui-doc__text">2. Đổi mật khẩu ở mọi trang khác đang dùng mật khẩu này.</div>
-                <div class="ui-doc__text">3. Bật xác thực hai yếu tố khi diễn đàn mở tính năng này.</div>
-                <div class="ui-doc__text">4. Cẩn thận với thư hoặc tin nhắn tự xưng là diễn đàn và đòi mật khẩu.</div>
-              </article>
-              <aside class="ui-doc__note ui-panel is-on">
-                <div class="ui-doc__kind"><span class="ui-doc__dot"></span><span data-doc-kind>Có trong kho</span></div>
-                <div class="ui-doc__msg" data-doc-msg>sv_nhom5 dùng chung mật khẩu với Facebook.</div>
-                <div class="ui-doc__where" data-doc-where>Kho tài khoản · 2 tài khoản</div>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div></div>
-  </section>
-
-  <section class="section" id="kho" aria-labelledby="kho-h">
-    <div class="wrap">
-      <div class="grid">
-        <h2 class="span-5" id="kho-h">Kho tài khoản xếp sẵn việc cần làm</h2>
-        <div class="span-6 start-7 stack-4">
-          <p>Mỗi dòng là một tài khoản kèm kết quả kiểm tra. Mở một dòng để xem lý do và các bước nên làm, việc gấp nhất ở trên cùng.</p>
-          <a class="link" href="app.html#kho-tai-khoan">Mở kho trong bản minh họa</a>
-        </div>
-      </div>
-      <div class="ui app fill" role="img" aria-label="Cửa sổ Lá Chắn: 10 tài khoản trong kho, tài khoản Diễn đàn Sinh viên đang mở với 4 kết quả kiểm tra và 3 việc cần làm" data-ui-pause-host>
-        <div class="app__pane app__pane--list">
-          <div class="ui ui-panel ui-win" data-ui="window">
-            <div class="ui-win__bar">
-              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="ui-win__crumb"><svg class="ui-brand" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="6.5" cy="6.5" r="4.5"/><circle cx="17.5" cy="6.5" r="4.5"/><circle cx="6.5" cy="17.5" r="4.5"/><rect x="13" y="13" width="9" height="9" rx="1.5"/></svg>Lá Chắn <i>/</i> <b>Kho tài khoản</b></span>
-              <span class="ui-spacer"></span>
-              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Tìm</span><span class="ui-kbd">/</span></span>
-            </div>
-            <div class="ui-win__body">
-              <nav class="ui-win__side" aria-hidden="true">
-                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/></svg>Tổng quan</span>
-                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="2.5" y="3" width="11" height="10" rx="1.5"/><circle cx="8" cy="8" r="2.5"/></svg>Kho<em>10</em></span>
-                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 1.8 13 4v3.6c0 3-2.1 5.4-5 6.6-2.9-1.2-5-3.6-5-6.6V4z"/><path d="m5.8 8 1.6 1.6 3-3.2"/></svg>Kiểm tra<em>7</em></span>
-                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M12 6.5a4 4 0 0 0-8 0c0 4.5-2 4.5-2 6h12c0-1.5-2-1.5-2-6"/><path d="M6.8 14a1.4 1.4 0 0 0 2.4 0"/></svg>Cảnh báo<em>1</em></span>
-                <span class="ui-win__label">Lọc</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Chưa đạt</span>
-                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Đã đạt</span>
-              </nav>
-              <div class="ui-win__main">
-                <div class="ui-win__cols" aria-hidden="true"><span>Dịch vụ</span><span>Tài khoản</span><span>Trạng thái</span><span>2FA</span></div>
-                <ul class="ui-win__rows">
-                  <li class="ui-win__row is-sel" data-row><span class="ui-avatar" data-tone="4">SV</span><span class="ui-win__who">Diễn đàn Sinh viên</span><span class="ui-win__sub">sv_nhom5 · dính sự cố</span><span class="ui-win__st is-you" data-st>Cần xử lý</span><span class="ui-win__age">Chưa</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="facebook" src="assets/icons/facebook.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Facebook</span><span class="ui-win__sub">sv.nhom5 · dùng chung mật khẩu</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Chưa</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="logos:google-icon" src="assets/icons/google-icon.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Google</span><span class="ui-win__sub">sv.nhom5 · mật khẩu riêng</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span><span class="ui-win__age">Bật</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="github" src="assets/icons/github.svg" alt="" width="15" height="15"></span><span class="ui-win__who">GitHub</span><span class="ui-win__sub">sv-nhom5 · mật khẩu riêng</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span><span class="ui-win__age">Bật</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="notion" src="assets/icons/notion.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Notion</span><span class="ui-win__sub">sv.nhom5 · chưa bật 2FA</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Tắt</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="spotify" src="assets/icons/spotify.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Spotify</span><span class="ui-win__sub">sv.nhom5 · 2FA chưa xác minh</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Chưa</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="discord" src="assets/icons/discord.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Discord</span><span class="ui-win__sub">sv.nhom5 · mật khẩu 10 ký tự</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Chưa</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="teams" src="assets/icons/teams.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Microsoft Teams</span><span class="ui-win__sub">tài khoản trường · mật khẩu riêng</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span><span class="ui-win__age">Bật</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="instagram" src="assets/icons/instagram.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Instagram</span><span class="ui-win__sub">sv.nhom5 · 2FA chưa xác minh</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Chưa</span></li>
-                  <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="tiktok" src="assets/icons/tiktok.svg" alt="" width="15" height="15"></span><span class="ui-win__who">TikTok</span><span class="ui-win__sub">sv.nhom5 · 2FA chưa xác minh</span><span class="ui-win__st" data-st>Cần kiểm tra</span><span class="ui-win__age">Chưa</span></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="app__pane app__pane--open" data-ui-loop>
-          <div class="ui ui-panel lc-acc">
-            <div class="lc-acc__head">
-              <span class="ui-avatar ui-avatar--md" data-tone="4">SV</span>
-              <div><div class="ui-title">Diễn đàn Sinh viên</div><div class="lc-acc__sub">sv_nhom5 · cảnh báo hôm nay</div></div>
-              <span class="ui-spacer"></span>
-              <span class="ui-win__st is-you">Cần xử lý</span>
-            </div>
-            <div class="lc-acc__cols">
-              <ul class="lc-acc__list">
-                <li><span>Tên đăng nhập</span><b>sv_nhom5</b></li>
-                <li><span>Mật khẩu</span><b class="lc-acc__mask">•••••••••••</b></li>
-                <li><span>Cách lưu</span><b>Khi bạn đăng nhập</b></li>
-                <li><span>Sự cố ở dịch vụ</span><b>Cần xử lý</b></li>
-                <li><span>Mật khẩu dùng lại</span><b>Trùng với Facebook</b></li>
-                <li><span>Độ dài mật khẩu</span><b>11 ký tự, ngắn</b></li>
-                <li><span>Xác thực hai yếu tố</span><b>Chưa xác minh</b></li>
-                <li><span>Cảnh báo</span><b>1 bản tin hôm nay</b></li>
-              </ul>
-              <div class="lc-acc__side">
-                <div class="ui ui-panel ui-checks" data-ui="checklist">
-                  <div class="ui-checks__head">
-                    <div class="ui-title">Việc cần làm</div>
-                    <span class="ui-spacer"></span>
-                    <div class="ui-meta" data-checks-count>0 trên 3</div>
-                  </div>
-                  <div class="ui-checks__bar"><i data-checks-bar style="--k:0"></i></div>
-                  <ul class="ui-checks__list">
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Đổi mật khẩu trên trang diễn đàn</span></li>
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Đổi mật khẩu Facebook đang dùng chung</span></li>
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Xem diễn đàn có hỗ trợ 2FA không</span></li>
-                  </ul>
-                </div>
-                <div class="lc-acc__ai">
-                  <div class="lc-acc__label">Tóm tắt của Lá Chắn</div>
-                  <p>Diễn đàn báo một số mật khẩu có thể đã bị lộ nhưng chưa nêu tài khoản nào. Mật khẩu này đang dùng cho 2 tài khoản trong kho, nên đổi cả hai.</p>
-                  <p class="lc-acc__src">Nguồn: bản tin công khai của Diễn đàn Sinh viên</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <dialog id="dialog" aria-labelledby="dialog-title">
+    <div class="dialog-head">
+      <h2 id="dialog-title"></h2>
+      <button class="btn icon-button" type="button" data-action="close" aria-label="Đóng hộp thoại"><svg class="icon"><use href="#i-close"/></svg></button>
     </div>
-  </section>
-
-  <section class="section" id="luu" aria-labelledby="luu-h">
-    <div class="wrap">
-      <div class="grid fill">
-        <div class="span-5 stack-5">
-          <h2 id="luu-h">Lưu tài khoản khi bạn cho phép</h2>
-          <p class="t-lead">Khi bạn đăng nhập một trang, Lá Chắn hỏi có lưu tài khoản đó vào kho không. Chọn Không lưu thì kho giữ nguyên.</p>
-          <p>Mật khẩu trong kho được che cho đến khi bạn bấm Hiện.</p>
-          <p>Tài khoản vừa lưu được kiểm tra ngay theo 4 mục.</p>
-          <a class="link" href="#cau-hoi">Đọc câu hỏi về dữ liệu</a>
-        </div>
-        <div class="frame frame--split frame--fill span-6 start-7" data-visual data-fx="silk-folds" data-fx-seed="18" role="img" aria-label="Kho tài khoản của Lá Chắn với hộp thoại hỏi có lưu tài khoản Spotify vừa đăng nhập, gồm lựa chọn Không lưu và nút Cho phép lưu">
-          <div class="stage stage--fade-br">
-            <div class="at-corner to-edge fit" style="--ax:56px;--ay:56px;--fit-max:600px">
-              <div class="ui ui-panel ui-win ui-win--compact" data-ui="window" data-ui-opts='{"compact":true}'>
-                <div class="ui-win__bar">
-                  <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                  <span class="ui-win__crumb"><svg class="ui-brand" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="6.5" cy="6.5" r="4.5"/><circle cx="17.5" cy="6.5" r="4.5"/><circle cx="6.5" cy="17.5" r="4.5"/><rect x="13" y="13" width="9" height="9" rx="1.5"/></svg>Lá Chắn <i>/</i> <b>Kho</b></span>
-                  <span class="ui-spacer"></span>
-                  <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Tìm</span></span>
-                </div>
-                <div class="ui-win__body">
-                  <nav class="ui-win__side" aria-hidden="true">
-                    <span class="ui-win__nav is-on">Kho<em>10</em></span>
-                    <span class="ui-win__nav">Kiểm tra<em>7</em></span>
-                    <span class="ui-win__nav">Cảnh báo<em>1</em></span>
-                  </nav>
-                  <div class="ui-win__main">
-                    <ul class="ui-win__rows">
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="spotify" src="assets/icons/spotify.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Spotify</span><span class="ui-win__sub">sv.nhom5 · vừa lưu</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="logos:google-icon" src="assets/icons/google-icon.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Google</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="facebook" src="assets/icons/facebook.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Facebook</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">SV</span><span class="ui-win__who">Diễn đàn Sinh viên</span><span class="ui-win__sub">sv_nhom5</span><span class="ui-win__st is-you" data-st>Cần xử lý</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="github" src="assets/icons/github.svg" alt="" width="15" height="15"></span><span class="ui-win__who">GitHub</span><span class="ui-win__sub">sv-nhom5</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="notion" src="assets/icons/notion.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Notion</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="discord" src="assets/icons/discord.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Discord</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="teams" src="assets/icons/teams.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Microsoft Teams</span><span class="ui-win__sub">tài khoản trường</span><span class="ui-win__st is-done" data-st>Đạt kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="instagram" src="assets/icons/instagram.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Instagram</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                      <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="tiktok" src="assets/icons/tiktok.svg" alt="" width="15" height="15"></span><span class="ui-win__who">TikTok</span><span class="ui-win__sub">sv.nhom5</span><span class="ui-win__st" data-st>Cần kiểm tra</span></li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="at-over" style="--bx:56px;--by:24px">
-              <div class="ui ui-panel ui-cursor" data-ui="cursor">
-                <div class="ui-head">
-                  <span class="ui-logo ui-logo--sm"><img data-icon="spotify" src="assets/icons/spotify.svg" alt="" width="16" height="16"></span>
-                  <div class="ui-title">Lưu tài khoản Spotify?</div>
-                  <span class="ui-spacer"></span>
-                  <span class="ui-chip ui-cursor__state" data-cur-state data-done="Đã lưu">Chờ bạn chọn</span>
-                </div>
-                <div class="ui-cursor__body">
-                  <div class="ui-cursor__text">Bạn vừa đăng nhập Spotify. Lá Chắn chỉ lưu khi bạn cho phép.</div>
-                  <div class="ui-cursor__row">
-                    <span class="ui-cursor__ico" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span>
-                    <span class="ui-cursor__what"><span class="ui-cursor__name">sv.nhom5</span><span class="ui-cursor__sub" data-cur-sub data-done="Đã vào kho">Mật khẩu đang được che</span></span>
-                    <span class="ui-cursor__amt">••••••••</span>
-                  </div>
-                </div>
-                <div class="ui-cursor__foot">
-                  <span class="lc-skip">Không lưu</span>
-                  <span class="ui-spacer"></span>
-                  <button class="ui-btn ui-cursor__go" type="button" tabindex="-1" data-cur-btn data-busy="Đang lưu" data-done="Đã lưu"><span class="ui-spin ui-cursor__spin" aria-hidden="true"></span><svg class="ui-cursor__ok" viewBox="0 0 16 16" aria-hidden="true"><path d="m4.5 8.2 2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-cur-label>Cho phép lưu</span></button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section g2 ground-surface" id="kiem-tra" aria-labelledby="kiem-tra-h">
-    <div class="wrap">
-      <div class="group">
-        <div class="section-head">
-          <h2 id="kiem-tra-h">4 mục kiểm tra cho mỗi tài khoản. <span class="muted">Việc gấp nhất luôn đứng đầu.</span></h2>
-        </div>
-        <div class="grid">
-          <article class="card card--row card--open span-6 m-nolift" id="su-co">
-            <h3>Gắn sự cố ở dịch vụ vào tài khoản</h3>
-            <p>Lá Chắn đọc bản tin rò rỉ công khai và tách thành việc cần làm cho từng tài khoản.</p>
-            <div class="panel" data-fx="fluted-glass" data-fx-seed="31" data-fx-params='{"speed":0}'>
-              <div class="dg" data-ui-loop data-diagram='{"layout":"lanes","alt":"Bản tin rò rỉ của Diễn đàn Sinh viên đi vào Lá Chắn và tách thành ba việc: đổi mật khẩu diễn đàn, đổi mật khẩu Facebook đang dùng chung, xem lại 2FA.","input":{"label":"Bản tin rò rỉ","icon":"ui:newspaper","sub":"Diễn đàn SV","cap":false},"core":{"label":"Lá Chắn","icon":"ui:shield-check"},"lanes":[{"label":"Đổi mật khẩu","icon":"ui:key-round","sub":"Diễn đàn SV","cap":false},{"label":"Đổi mật khẩu","icon":"facebook","sub":"Dùng chung","cap":false},{"label":"Xem lại 2FA","icon":"ui:smartphone","sub":"Chưa xác minh","cap":false}]}'></div>
-            </div>
-          </article>
-          <article class="card card--row card--open span-6 m-nolift" id="mat-khau-yeu">
-            <h3>Báo mật khẩu ngắn</h3>
-            <p>Mật khẩu dưới 14 ký tự bị coi là ngắn, và tài khoản đó vào danh sách cần đổi.</p>
-            <div class="panel" data-fx="fluted-glass" data-fx-seed="53" data-fx-params='{"speed":0}'>
-              <div class="stage stage--fade-b"><div class="at-rise fit" style="--ax:max(24px, 50% - 170px);--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px);--fit-max:340px">
-                <div class="ui ui-panel ui-checks" data-ui="checklist">
-                  <div class="ui-checks__head">
-                    <div class="ui-title">Mật khẩu dưới 14 ký tự</div>
-                    <span class="ui-spacer"></span>
-                    <div class="ui-meta" data-checks-count>0 trên 3 đã đổi</div>
-                  </div>
-                  <div class="ui-checks__bar"><i data-checks-bar style="--k:0"></i></div>
-                  <ul class="ui-checks__list">
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Discord · 10 ký tự</span></li>
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Facebook · 11 ký tự</span></li>
-                    <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Diễn đàn Sinh viên · 11 ký tự</span></li>
-                  </ul>
-                </div>
-              </div></div>
-            </div>
-          </article>
-        </div>
-      </div>
-      <div class="grid">
-        <article class="card card--row card--open span-6 m-nolift" id="dung-lai">
-          <h3>Tìm mật khẩu dùng lại</h3>
-          <p>Tài khoản dùng chung một mật khẩu đứng cạnh nhau, để bạn đổi cả nhóm trong một lượt.</p>
-          <div class="panel panel--device">
-            <div class="panel__bar"><span>Lá Chắn</span><span class="muted">Mật khẩu dùng lại</span><span class="sp"></span><span class="panel__status"><i></i>2 tài khoản</span></div>
-            <div class="panel__screen" data-fx="fluted-glass" data-fx-seed="47" data-fx-params='{"speed":0}'>
-              <div class="stage stage--fade-b"><div class="at-corner fit" style="--ax:24px;--ay:28px;--fit-max:456px">
-                <div class="ui ui-panel ui-win ui-win--compact" data-ui="window" data-ui-opts='{"compact":true}'>
-                  <div class="ui-win__bar">
-                    <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                    <span class="ui-win__crumb">Kiểm tra <i>/</i> <b>Dùng lại</b></span>
-                    <span class="ui-spacer"></span>
-                  </div>
-                  <div class="ui-win__body">
-                    <nav class="ui-win__side" aria-hidden="true">
-                      <span class="ui-win__nav">Sự cố<em>1</em></span>
-                      <span class="ui-win__nav is-on">Dùng lại<em>2</em></span>
-                      <span class="ui-win__nav">Ngắn<em>3</em></span>
-                      <span class="ui-win__nav">2FA<em>7</em></span>
-                    </nav>
-                    <div class="ui-win__main">
-                      <ul class="ui-win__rows">
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="facebook" src="assets/icons/facebook.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Facebook</span><span class="ui-win__sub">sv.nhom5 · 11 ký tự</span><span class="ui-win__st is-you" data-st>Dùng chung</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">SV</span><span class="ui-win__who">Diễn đàn Sinh viên</span><span class="ui-win__sub">sv_nhom5 · 11 ký tự</span><span class="ui-win__st is-you" data-st>Dùng chung</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="discord" src="assets/icons/discord.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Discord</span><span class="ui-win__sub">sv.nhom5 · 10 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="logos:google-icon" src="assets/icons/google-icon.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Google</span><span class="ui-win__sub">sv.nhom5 · 18 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="github" src="assets/icons/github.svg" alt="" width="15" height="15"></span><span class="ui-win__who">GitHub</span><span class="ui-win__sub">sv-nhom5 · 18 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="notion" src="assets/icons/notion.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Notion</span><span class="ui-win__sub">sv.nhom5 · 18 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="spotify" src="assets/icons/spotify.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Spotify</span><span class="ui-win__sub">sv.nhom5 · 19 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="teams" src="assets/icons/teams.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Microsoft Teams</span><span class="ui-win__sub">tài khoản trường · 17 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="instagram" src="assets/icons/instagram.svg" alt="" width="15" height="15"></span><span class="ui-win__who">Instagram</span><span class="ui-win__sub">sv.nhom5 · 15 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                        <li class="ui-win__row" data-row><span class="ui-avatar lc-logo"><img data-icon="tiktok" src="assets/icons/tiktok.svg" alt="" width="15" height="15"></span><span class="ui-win__who">TikTok</span><span class="ui-win__sub">sv.nhom5 · 16 ký tự</span><span class="ui-win__st is-done" data-st>Riêng</span></li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div></div>
-            </div>
-          </div>
-        </article>
-        <article class="card card--row card--open span-6 m-nolift" id="hai-yeu-to">
-          <h3>Ghi nhận 2FA của từng tài khoản</h3>
-          <p>Trạng thái để Chưa xác minh cho đến khi bạn tự kiểm tra trong cài đặt dịch vụ.</p>
-          <div class="panel" data-fx="fluted-glass" data-fx-seed="59" data-fx-params='{"speed":0}'>
-            <div class="stage stage--fade-b"><div class="at-right to-edge" style="--ax:32px;--ay:56px">
-              <div class="ui ui-panel ui-toggles" data-ui="toggles">
-                <div class="ui-head">
-                  <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 13 4v3.6c0 3-2.1 5.4-5 6.6-2.9-1.2-5-3.6-5-6.6V4z"/><path d="m5.8 8 1.6 1.6 3-3.2"/></svg>
-                  <div class="ui-title">2FA đã xác nhận</div>
-                  <span class="ui-spacer"></span>
-                  <div class="ui-meta" data-tg-count>3/10 đã bật</div>
-                </div>
-                <ul class="ui-toggles__list">
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Google</span><span class="ui-tg__sub">Bạn xác nhận đã bật</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="2FA của Google" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">GitHub</span><span class="ui-tg__sub">Bạn xác nhận đã bật</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="2FA của GitHub" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Microsoft Teams</span><span class="ui-tg__sub">Bạn xác nhận đã bật</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="2FA của Microsoft Teams" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Notion</span><span class="ui-tg__sub">Bạn xác nhận chưa bật</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Notion" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Facebook</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Facebook" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Diễn đàn Sinh viên</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Diễn đàn Sinh viên" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Spotify</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Spotify" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Discord</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Discord" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Instagram</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của Instagram" tabindex="-1"><i></i></button></li>
-                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">TikTok</span><span class="ui-tg__sub">Chưa xác minh</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="2FA của TikTok" tabindex="-1"><i></i></button></li>
-                </ul>
-              </div>
-            </div></div>
-          </div>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="mot-mat-khau" data-moment="letters-assemble" data-moment-opts='{"spread":1}' aria-labelledby="mot-h">
-    <div class="wrap">
-      <h2 class="mo-la__type" id="mot-h">Mỗi tài khoản một mật khẩu</h2>
-      <p class="mo-la__sub">Trong bản minh họa, Facebook và Diễn đàn Sinh viên dùng chung một mật khẩu. Diễn đàn bị lộ dữ liệu thì mật khẩu Facebook cũng phải đổi.</p>
-    </div>
-  </section>
-
-  <section class="section bg-band" id="cau-hoi" aria-labelledby="cau-hoi-h" style="--g-screen: 100svh">
-    <div class="wrap grid">
-      <div class="span-5 stack-4">
-        <h2 id="cau-hoi-h">Câu hỏi về bản minh họa 1.0.0</h2>
-      </div>
-      <div class="faq span-6 start-7">
-        <div class="faq__item"><h3>Lá Chắn có lưu mật khẩu thật không?</h3><p>Không. Bản này không có ô nhập mật khẩu thật, và tải lại trang là kho trở về như cũ.</p></div>
-        <div class="faq__item"><h3>AI có đọc mật khẩu của tôi không?</h3><p>Không. AI chỉ đọc bản tin sự cố công khai. Ở bản này, phần tóm tắt được soạn sẵn.</p></div>
-        <div class="faq__item"><h3>Khi nào tài khoản bị ghi dính sự cố?</h3><p>Khi có căn cứ xác minh. Nếu bản tin chỉ nói dịch vụ bị lộ, kho ghi sự cố ở dịch vụ đó.</p></div>
-        <div class="faq__item"><h3>Lá Chắn 1.0.0 còn thiếu những gì?</h3><p>Tiện ích trình duyệt, kho mã hóa và nguồn tin rò rỉ thật. Độ mạnh chỉ xét độ dài.</p></div>
-        <div class="faq__item"><h3>Ai làm Lá Chắn?</h3><p>Nhóm 5 tại VKU: Lê Hoàng Bách, Nguyễn Đức Anh, Đặng Phạm Gia Bảo, Võ Ngọc Tùng Dương. Hướng dẫn: ThS. Ninh Khánh Chi.</p></div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<footer class="footer closing g2m" id="contact" aria-labelledby="close-h">
-  <div class="wrap">
-    <div class="closing__cta close--type">
-      <div class="section-head">
-        <h2 id="close-h">Thử Lá Chắn ngay trên trình duyệt</h2>
-        <p class="t-small muted">Không cần cài đặt hay tài khoản. Tải lại trang để về tình huống ban đầu.</p>
-      </div>
-      <a class="btn btn--primary btn--xl btn--wide" href="app.html">Thử bản minh họa<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
-    </div>
-    <div class="closing__links">
-      <div class="grid">
-        <div class="span-4 stack-4">
-          <a class="nav__logo" href="#top"><span class="mark" data-mark="dots" aria-hidden="true"></span>Lá Chắn</a>
-          <p class="footer__lede">Đồ án của Nhóm 5 tại VKU.</p>
-        </div>
-        <div class="span-2 footer__col"><h3>Kho</h3><ul><li><a href="#kho">Danh sách tài khoản</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Cách lưu</h3><ul><li><a href="#luu">Hỏi trước khi lưu</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Kiểm tra</h3><ul><li><a href="#su-co">Sự cố ở dịch vụ</a></li><li><a href="#dung-lai">Mật khẩu dùng lại</a></li><li><a href="#mat-khau-yeu">Mật khẩu ngắn</a></li><li><a href="#hai-yeu-to">Ghi nhận 2FA</a></li></ul></div>
-        <div class="span-2 footer__col"><h3>Câu hỏi</h3><ul><li><a href="#cau-hoi">Câu hỏi thường gặp</a></li></ul></div>
-      </div>
-      <div class="footer__legal">
-        <span>&copy; 2026 Nhóm 5 · VKU</span>
-        <div class="socials"></div>
-        <details class="credits"><summary>Tên và logo dịch vụ thuộc về chủ sở hữu</summary><p>Logo Google, Facebook, GitHub, Notion, Spotify, Discord, Microsoft Teams, Instagram và TikTok lấy từ bộ SVG Logos (CC0); biểu tượng giao diện lấy từ Lucide (ISC). <a href="assets/icons/icons-credits.json">Danh sách nguồn từng logo</a>.</p></details>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<script type="module" src="assets/system.js"></script>
-<script type="module" src="assets/motion/motion.js"></script>
-<script type="module" src="assets/layout/layout.js"></script>
-<script type="module" src="assets/diagrams/mount.js"></script>
+    <div id="dialog-content"></div>
+  </dialog>
+  <div id="notice" class="notice" role="status" aria-live="polite"></div>
 </body>
 </html>
