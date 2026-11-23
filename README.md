@@ -1,10 +1,10 @@
-# LoginGuard
+# CredBox
 
 Phiên bản 1.0.0
 
 Kho tài khoản và bảng theo dõi bảo mật của Nhóm 5, học phần Nhập môn ngành và Kỹ năng mềm tại VKU. Bản này là web mẫu dùng dữ liệu soạn sẵn, không lưu mật khẩu thật.
 
-Mở [LoginGuard trên GitHub Pages](https://nktu32-ux.github.io/bao-ve-tai-khoan/). Bốn mục Tổng quan, Kho tài khoản, Kiểm tra bảo mật và Cảnh báo nằm trong cùng trang `index.html`.
+Mở [CredBox trên GitHub Pages](https://nktu32-ux.github.io/bao-ve-tai-khoan/). Bốn mục Tổng quan, Kho tài khoản, Kiểm tra bảo mật và Cảnh báo nằm trong cùng trang `index.html`.
 
 ## Luồng trình bày trong index.html
 
