@@ -1,113 +1,163 @@
 "use strict";
 
-const accounts = [
-  { id: "google", name: "Google", domain: "google.com", user: "sv.nhom5", letter: "G", password: "Mau!Google-8R2-qV7", twoFactor: "enabled" },
-  { id: "facebook", name: "Facebook", domain: "facebook.com", user: "sv.nhom5", letter: "f", password: "SinhVien123", twoFactor: "unknown" },
-  { id: "forum", name: "Diễn đàn Sinh viên", domain: "diendan-sinhvien.example", user: "sv_nhom5", letter: "SV", password: "SinhVien123", twoFactor: "unknown" },
-  { id: "github", name: "GitHub", domain: "github.com", user: "sv-nhom5", letter: "GH", password: "Mau!GitHub-4T7-aK3", twoFactor: "enabled" },
-  { id: "notion", name: "Notion", domain: "notion.so", user: "sv.nhom5", letter: "N", password: "Mau!Notion-6H3-jS9", twoFactor: "disabled" },
-  { id: "discord", name: "Discord", domain: "discord.com", user: "sv.nhom5", letter: "D", password: "Discord#26", twoFactor: "unknown" },
-  { id: "teams", name: "Microsoft Teams", domain: "teams.microsoft.com", user: "sv.nhom5", letter: "T", password: "Mau!Teams-5K8-wQ2", twoFactor: "enabled" },
-  { id: "instagram", name: "Instagram", domain: "instagram.com", user: "sv.nhom5", letter: "I", password: "Mau!Insta-7P-z4", twoFactor: "unknown" },
-  { id: "tiktok", name: "TikTok", domain: "tiktok.com", user: "sv.nhom5", letter: "TT", password: "Mau!TikTok-3W-r8", twoFactor: "unknown" }
-];
-
-const serviceIcons = { google: "google-icon", facebook: "facebook", github: "github", notion: "notion", spotify: "spotify", discord: "discord", teams: "teams", instagram: "instagram", tiktok: "tiktok" };
-
-const proposedAccount = { id: "spotify", name: "Spotify", domain: "spotify.com", user: "sv.nhom5", letter: "S", password: "Mau!Spotify-9R6-pQ4", twoFactor: "unknown" };
+const storageName = "credbox.vault";
+const accounts = [];
+let snapshot = null;
+let vaultKey = null;
+let vaultSalt = null;
 const titles = {
   "tong-quan": "Tổng quan",
   "kho-tai-khoan": "Kho tài khoản",
   "kiem-tra": "Kiểm tra bảo mật",
   "canh-bao": "Cảnh báo"
 };
-const twoFactorLabels = { unknown: "Chưa xác minh", enabled: "Đã xác nhận bật", disabled: "Đã xác nhận chưa bật" };
+const twoFactorLabels = { unknown: "Chưa xác minh", enabled: "Đã bật", disabled: "Chưa bật" };
 const maskedPassword = "••••••••••••";
-const state = { route: "", alertRead: false, forumPasswordUpdated: false, detailId: null, revealed: false };
+const state = { route: "", detailId: null, revealed: false };
 let noticeTimer;
 
 const select = (selector) => document.querySelector(selector);
 const dialog = select("#dialog");
 const dialogContent = select("#dialog-content");
 
+function hasOpenVault() {
+  return vaultKey !== null;
+}
+
+function isLocked() {
+  return snapshot !== null && !hasOpenVault();
+}
+
+function escapeHtml(value) {
+  const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(value).replace(/[&<>"']/g, char => entities[char]);
+}
+
 function icon(name) {
   return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>';
 }
 
 function badge(label, tone, symbol) {
-  return '<span class="badge tone-' + tone + '">' + (symbol ? icon(symbol) : "") + label + '</span>';
+  return '<span class="badge tone-' + tone + '">' + (symbol ? icon(symbol) : "") + escapeHtml(label) + '</span>';
 }
 
 function accountStatus(account) {
-  const reusedWith = accounts.filter((item) => item.id !== account.id && item.password === account.password);
-  // The sample values illustrate the result of a future password-strength estimator.
-  const weak = account.password.length < 14;
-  const incident = account.id === "forum" && !state.forumPasswordUpdated;
-  const needsReview = incident || weak || reusedWith.length > 0 || account.twoFactor !== "enabled";
-  return { reusedWith, weak, incident, needsReview };
+  const reusedWith = accounts.filter(item => item.id !== account.id && item.password === account.password);
+  const weak = [...account.password].length < 14;
+  const unrecognized = account.loginHistory?.some(entry => entry.unrecognized) ?? false;
+  return { reusedWith, weak, unrecognized, needsReview: unrecognized || weak || reusedWith.length > 0 || account.twoFactor !== "enabled" };
 }
 
 function serviceMark(account) {
-  const name = serviceIcons[account.id];
-  const mark = name
-    ? '<img src="assets/icons/' + name + '.svg" alt="" width="20" height="20">'
-    : account.letter;
-  return '<span class="service service-' + account.id + '" aria-hidden="true">' + mark + '</span>';
+  const letter = Array.from(account.name.trim())[0] || "•";
+  return '<span class="service" aria-hidden="true">' + escapeHtml(letter.toLocaleUpperCase("vi")) + '</span>';
 }
 
-function accountRow(account) {
-  const status = accountStatus(account);
-  const marker = status.incident
-    ? badge("Cần xử lý", "risk")
-    : status.needsReview ? badge("Cần kiểm tra", "warn") : badge("Đạt kiểm tra", "ok");
+function encodeBytes(bytes) {
+  return btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(""));
+}
+
+function decodeBytes(value) {
+  return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+}
+
+async function deriveVaultKey(passphrase, salt) {
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 600000, hash: "SHA-256" }, material,
+    { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+  );
+}
+
+async function readAccounts(passphrase, saved) {
+  const envelope = JSON.parse(saved);
+  if (envelope.version !== 1) throw new Error("Định dạng kho chưa được hỗ trợ.");
+  const salt = decodeBytes(envelope.salt);
+  const key = await deriveVaultKey(passphrase, salt);
+  let plaintext;
+  try {
+    plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: decodeBytes(envelope.iv) }, key, decodeBytes(envelope.data)
+    );
+  } catch {
+    throw new Error("Không mở được kho. Kiểm tra mật khẩu chính và thử lại.");
+  }
+  const records = JSON.parse(new TextDecoder().decode(plaintext));
+  if (!Array.isArray(records) || !records.every(record =>
+    record && ["id", "name", "domain", "user", "password"].every(field => typeof record[field] === "string") &&
+    /^[\da-f-]{36}$/i.test(record.id) && Object.hasOwn(twoFactorLabels, record.twoFactor) &&
+    (record.loginHistory === undefined || (Array.isArray(record.loginHistory) && record.loginHistory.every(validLoginEntry)))
+  )) throw new Error("Dữ liệu kho không đọc được.");
+  return { key, salt, records };
+}
+
+async function writeAccounts(records, key, salt, previous) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const bytes = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(records)));
+  const next = JSON.stringify({ version: 1, salt: encodeBytes(salt), iv: encodeBytes(iv), data: encodeBytes(new Uint8Array(bytes)) });
+  // Only the tab editing the latest snapshot may commit its changes.
+  await navigator.locks.request(storageName, () => {
+    if (snapshot !== previous || localStorage.getItem(storageName) !== previous) {
+      throw new Error("Kho đã thay đổi ở thẻ khác. Mở khóa lại để dùng dữ liệu mới nhất.");
+    }
+    localStorage.setItem(storageName, next);
+    snapshot = next;
+  });
+}
+
+function accountRow(account, label, action = "detail") {
+  const { needsReview, unrecognized } = accountStatus(account);
+  let status;
+  if (unrecognized) status = badge("Đăng nhập cần xác minh", "risk");
+  else if (action === "history") status = badge(`${account.loginHistory?.length || 0} lần ghi nhận`, "info");
+  else status = badge(label || (needsReview ? "Cần kiểm tra" : "Đạt yêu cầu"), needsReview ? "warn" : "ok");
   return `
-    <button class="account-row" type="button" data-action="detail" data-account="${account.id}">
+    <button class="account-row" type="button" data-action="${action}" data-account="${escapeHtml(account.id)}">
       <span class="account-identity">
         ${serviceMark(account)}
-        <span><strong>${account.name}</strong><small>${account.user}</small></span>
+        <span><strong>${escapeHtml(account.name)}</strong><small>${escapeHtml(account.user)}</small></span>
       </span>
-      ${marker}${icon("chevron")}
+      ${status}${icon("chevron")}
     </button>`;
 }
 
+function emptyState(symbol, title, message) {
+  return `<div class="empty-state">${icon(symbol)}<h3>${title}</h3><p>${message}</p></div>`;
+}
+
+function vaultPlaceholder() {
+  return isLocked()
+    ? emptyState("lock", "Kho đang khóa", "Mở khóa bằng mật khẩu chính để xem tài khoản của bạn.")
+    : emptyState("vault", "Chưa có tài khoản", "Chọn “Thêm tài khoản” để lưu tài khoản đầu tiên.");
+}
+
 function renderOverview() {
-  const reviewCount = accounts.filter((account) => accountStatus(account).needsReview).length;
+  const checks = accounts.map(accountStatus);
+  const reviewCount = checks.filter(info => info.needsReview).length;
   const cleared = accounts.length - reviewCount;
-  select("#coverage-ratio").textContent = cleared + "/" + accounts.length;
-  select("#coverage-clear").textContent = cleared;
-  select("#coverage-review").textContent = reviewCount;
-  select("#coverage-ring").style.setProperty("--cleared", (cleared / accounts.length * 100) + "%");
-  select("#spotlight-status").textContent = state.alertRead ? "Đã đọc" : "Chưa đọc";
+  const locked = isLocked();
+  const count = value => locked ? "—" : value;
+  select("#coverage-ratio").textContent = accounts.length ? Math.round(cleared / accounts.length * 100) + "%" : "—";
+  select("#coverage-clear").textContent = count(cleared);
+  select("#coverage-review").textContent = count(reviewCount);
+  select("#coverage-ring").style.setProperty("--cleared", (accounts.length ? cleared / accounts.length * 100 : 0) + "%");
+  select("#hero-copy").textContent = locked ? "Mở khóa kho để xem kết quả kiểm tra của bạn."
+    : !accounts.length ? "Lưu tài khoản đầu tiên để bắt đầu theo dõi bảo mật."
+    : reviewCount ? `Có ${reviewCount} tài khoản cần xem lại trong kho của bạn.`
+    : "Tất cả tài khoản đã lưu đều đạt các mục kiểm tra.";
   const metrics = [
     [accounts.length, "Tài khoản đã lưu", "kho-tai-khoan", "vault", "info"],
-    [reviewCount, "Cần kiểm tra", "kiem-tra", "shield", "warn"],
-    [state.alertRead ? 0 : 1, "Cảnh báo chưa đọc", "canh-bao", "bell", "risk"]
+    [checks.filter(info => info.reusedWith.length).length, "Tài khoản trùng mật khẩu", "canh-bao", "refresh", "warn"],
+    [reviewCount, "Tài khoản cần kiểm tra", "kiem-tra", "shield", "info"]
   ];
-  select("#hero-title").textContent = reviewCount
-    ? reviewCount + " tài khoản cần xem lại"
-    : "Đã xử lý các mục kiểm tra";
-  select("#hero-copy").textContent = state.forumPasswordUpdated
-    ? "Kiểm tra mật khẩu dùng lại và trạng thái xác thực hai yếu tố."
-    : "Ưu tiên Diễn đàn Sinh viên. Thông báo sự cố mẫu ghi nhận mật khẩu bị lộ.";
-  const metricsRoot = select("#metrics");
-  if (!metricsRoot.childElementCount) {
-    metricsRoot.innerHTML = metrics.map(([value, label, route, symbol, tone]) => `
-      <a class="metric" href="#${route}">
-        <span class="metric-label">${label}</span>
-        <strong data-count data-value="${value}">${value}</strong>
-        <span class="metric-icon tone-${tone}">${icon(symbol)}</span>
-      </a>`).join("");
-  } else {
-    metricsRoot.querySelectorAll("[data-count]").forEach((count, index) => {
-      const value = String(metrics[index][0]);
-      if (count.dataset.value === value) return;
-      count.dataset.value = value;
-      count.classList.remove("mo-cr", "is-on");
-      count.removeAttribute("aria-label");
-      count.textContent = value;
-    });
-  }
-  select("#recent-accounts").innerHTML = accounts.slice(0, 3).map(accountRow).join("");
+  select("#metrics").innerHTML = metrics.map(([value, label, route, symbol, tone]) => `
+    <a class="metric" href="#${route}">
+      <span class="metric-label">${label}</span><strong>${count(value)}</strong>
+      <span class="metric-icon tone-${tone}">${icon(symbol)}</span>
+    </a>`).join("");
+  select("#tong-quan .row-labels").hidden = !accounts.length;
+  select("#recent-accounts").innerHTML = accounts.length
+    ? accounts.slice(0, 3).map(account => accountRow(account)).join("") : vaultPlaceholder();
 }
 
 function normalized(text) {
@@ -122,73 +172,62 @@ function renderVault() {
     const { needsReview } = accountStatus(account);
     return matchesQuery && (filter === "all" || (filter === "review" ? needsReview : !needsReview));
   });
+  select(".vault-toolbar").hidden = !accounts.length;
+  select("#vault-count").hidden = !accounts.length;
+  select("#kho-tai-khoan .row-labels").hidden = !filtered.length;
   select("#vault-count").textContent = filtered.length + " / " + accounts.length + " tài khoản";
-  select("#vault-accounts").innerHTML = filtered.length
-    ? filtered.map(accountRow).join("")
-    : '<p class="empty">Không tìm thấy tài khoản phù hợp.</p>';
+  select("#vault-accounts").innerHTML = filtered.length ? filtered.map(account => accountRow(account)).join("")
+    : accounts.length ? emptyState("search", "Không tìm thấy tài khoản", "Thử từ khóa khác hoặc đổi bộ lọc.") : vaultPlaceholder();
 }
 
 function renderHealth() {
+  const root = select("#security-checks");
+  if (isLocked()) {
+    root.innerHTML = '<section class="panel">' + vaultPlaceholder() + '</section>';
+    return;
+  }
+  const expanded = new Set(Array.from(root.querySelectorAll("details[open]"), panel => panel.dataset.check));
   const checks = [
-    { title: "Liên quan đến sự cố", description: "Hãy đổi mật khẩu ở dịch vụ có cảnh báo trước.", icon: "alert", tone: "risk", records: accounts.filter((account) => accountStatus(account).incident) },
-    { title: "Mật khẩu dùng lại", description: "Đổi sang mật khẩu riêng cho từng tài khoản trong danh sách.", icon: "refresh", tone: "warn", records: accounts.filter((account) => accountStatus(account).reusedWith.length) },
-    { title: "Mật khẩu yếu", description: "Thay mật khẩu dễ đoán bằng mật khẩu dài và riêng biệt.", icon: "lock", tone: "warn", records: accounts.filter((account) => accountStatus(account).weak) },
-    { title: "Xác thực hai yếu tố (2FA)", description: "Kiểm tra trong cài đặt của dịch vụ, sau đó ghi nhận vào kho.", icon: "shield", tone: "info", records: accounts.filter((account) => account.twoFactor !== "enabled") }
+    ["Lịch sử đăng nhập", "Chọn tài khoản để xem thời gian, thiết bị và địa điểm đăng nhập.", "history", accounts, "history"],
+    ["Mật khẩu dùng lại", "Dùng mật khẩu riêng cho từng tài khoản.", "refresh", accounts.filter(a => accountStatus(a).reusedWith.length)],
+    ["Mật khẩu ngắn", "Những mật khẩu trong danh sách này có dưới 14 ký tự.", "lock", accounts.filter(a => accountStatus(a).weak)],
+    ["Xác thực hai yếu tố", "Bật bước xác minh thứ hai ở dịch vụ rồi cập nhật trạng thái trong kho.", "shield", accounts.filter(a => a.twoFactor !== "enabled")]
   ];
-  select("#security-checks").innerHTML = checks.map((check) => `
-    <section class="panel">
-      <div class="check-header">
-        <span class="metric-icon tone-${check.tone}">${icon(check.icon)}</span>
-        <div><h2>${check.title}<span class="check-count"> · ${check.records.length}</span></h2><p>${check.description}</p></div>
-      </div>
-      ${check.records.length ? check.records.map(accountRow).join("") : '<p class="empty">Không có tài khoản cần xử lý ở mục này.</p>'}
-    </section>`).join("");
+  root.innerHTML = checks.map(([title, description, symbol, records, action]) => `
+    <details class="panel" data-check="${symbol}" ${expanded.has(symbol) ? "open" : ""}>
+      <summary class="check-header"><span class="metric-icon tone-info">${icon(symbol)}</span>
+        <span><strong class="check-title">${title}</strong><span class="check-count"> · ${records.length}</span>
+          <span class="check-description">${description}</span></span>${icon("chevron")}
+      </summary>
+      ${records.length ? records.map(a => accountRow(a, undefined, action)).join("") : `<p class="empty">${action === "history" ? "Chưa có tài khoản trong kho." : "Không có tài khoản cần xử lý."}</p>`}
+    </details>`).join("");
 }
 
 function renderAlerts() {
-  const forum = accounts.find((account) => account.id === "forum");
-  const { reusedWith } = accountStatus(forum);
-  const priority = state.forumPasswordUpdated
-    ? "Đã ghi nhận đổi mật khẩu mẫu của Diễn đàn Sinh viên."
-    : "Mở trang chính thức của diễn đàn và đổi mật khẩu.";
-  select("#alerts-content").innerHTML = `
-    <div class="alert-grid">
-      <article class="panel alert-panel">
-        <div class="alert-meta">
-          ${badge("Sự cố giả lập", "risk", "alert")}
-          ${badge(state.alertRead ? "Đã đọc" : "Chưa đọc", state.alertRead ? "neutral" : "info")}
-        </div>
-        <h2>Diễn đàn Sinh viên thông báo rò rỉ mật khẩu</h2>
-        <p>Một số tài khoản trên diễn đàn bị ảnh hưởng. Chưa xác minh tài khoản trong kho thuộc danh sách bị lộ.</p>
-        <p class="source">Nguồn tình huống · Bản tin mẫu của Diễn đàn Sinh viên</p>
-        <div class="actions">
-          <button class="btn btn--primary" type="button" data-action="detail" data-account="forum">Xem tài khoản</button>
-          <button class="btn btn--secondary" type="button" data-action="read-alert" aria-disabled="${state.alertRead}">${state.alertRead ? "Đã đọc cảnh báo" : "Đánh dấu đã đọc"}</button>
-        </div>
-      </article>
-      <aside class="panel ai-note" aria-labelledby="ai-title">
-        <h2 id="ai-title"><span class="metric-icon tone-info">${icon("spark")}</span> Tóm tắt AI mẫu</h2>
-        <ol>
-          <li>${priority}</li>
-          <li>Đổi mật khẩu ở những tài khoản từng dùng chung mật khẩu cũ.</li>
-          <li>Xem dịch vụ có hỗ trợ 2FA và bật trong phần cài đặt nếu có.</li>
-        </ol>
-      </aside>
-    </div>
-    <section class="panel linked-accounts" aria-labelledby="linked-title">
-      <div class="panel-heading"><h2 id="linked-title">Tài khoản liên quan</h2></div>
-      ${[forum, ...reusedWith].map(accountRow).join("")}
-    </section>`;
+  const warnings = [];
+  for (const account of accounts) {
+    const { weak, reusedWith, unrecognized } = accountStatus(account);
+    if (weak || reusedWith.length || unrecognized) {
+      const label = weak && reusedWith.length ? "Ngắn và dùng lại" : weak ? "Mật khẩu ngắn" : "Dùng lại mật khẩu";
+      warnings.push(accountRow(account, label));
+    }
+  }
+  select("#alerts-content").innerHTML = '<div class="panel">' + (warnings.length ? warnings.join("")
+    : !accounts.length ? vaultPlaceholder()
+    : emptyState("shield", "Chưa có cảnh báo", "Dữ liệu đã lưu hiện không có mục cần cảnh báo.")) + '</div>';
+  const counter = select("[data-unread]");
+  counter.hidden = !warnings.length;
+  counter.textContent = String(warnings.length);
 }
 
 function renderAll() {
+  select('[data-action="lock"]').hidden = !hasOpenVault();
+  select('[data-action="unlock"]').hidden = !isLocked();
+  select('[data-action="add"]').hidden = isLocked();
   renderOverview();
   renderVault();
   renderHealth();
   renderAlerts();
-  const unread = select("[data-unread]");
-  unread.hidden = state.alertRead;
-  unread.textContent = state.alertRead ? "" : "1";
 }
 
 function updateRoute(moveFocus = false) {
@@ -226,70 +265,257 @@ function openDialog(title, markup) {
   if (!dialog.open) dialog.showModal();
 }
 
-function showLogin() {
-  if (accounts.some((account) => account.id === proposedAccount.id)) {
-    showDetail(proposedAccount.id);
+function openAccess(addAfterUnlock) {
+  try {
+    syncSnapshot();
+    if (!window.crypto?.subtle || !navigator.locks) throw new Error();
+  } catch {
+    openDialog("Không thể mở kho", '<p>Dùng HTTPS hoặc localhost trong trình duyệt hiện đại và cho phép trang lưu dữ liệu trên thiết bị.</p>');
     return;
   }
-  openDialog("Lưu tài khoản Spotify?", `
-    <div class="detail-service">${serviceMark(proposedAccount)}<div><strong>Spotify</strong><p>Yêu cầu lưu thông tin đăng nhập</p></div></div>
-    <p>Bạn vừa đăng nhập Spotify trong tình huống mẫu. Hãy chọn có lưu thông tin này vào kho tài khoản hay không.</p>
-    <div class="dialog-fields">
-      <div class="field"><span>Trang web</span><strong>${proposedAccount.domain}</strong></div>
-      <div class="field"><span>Tên đăng nhập mẫu</span><strong>${proposedAccount.user}</strong></div>
-      <div class="field"><span>Mật khẩu mẫu</span><output aria-label="Mật khẩu đang ẩn">${maskedPassword}</output></div>
-    </div>
-    <div class="actions">
-      <button class="btn btn--primary" type="button" data-action="save-login">Cho phép lưu</button>
-      <button class="btn btn--secondary" type="button" data-action="skip-login">Không lưu</button>
-    </div>`);
+  if (hasOpenVault()) {
+    if (addAfterUnlock) showAccountForm();
+    return;
+  }
+  const create = !isLocked();
+  openDialog(create ? "Tạo kho cá nhân" : "Mở khóa kho", `
+    <form class="dialog-form" id="access-form" data-next="${addAfterUnlock ? "add" : ""}">
+      <p class="form-help">${create
+        ? "Đặt mật khẩu chính để mã hóa kho trên trình duyệt này. Hãy ghi nhớ mật khẩu vì CredBox không thể cấp lại."
+        : "Nhập mật khẩu chính để mở kho đã lưu trong trình duyệt này."}</p>
+      <label class="form-field"><span>Mật khẩu chính</span><input name="passphrase" type="password" autocomplete="${create ? "new-password" : "current-password"}" ${create ? 'minlength="12" placeholder="Ít nhất 12 ký tự"' : ""} required></label>
+      ${create ? '<label class="form-field"><span>Nhập lại mật khẩu chính</span><input name="confirmation" type="password" autocomplete="new-password" required></label>' : ""}
+      <p class="form-error" role="alert"></p>
+      <div class="actions"><button type="submit" class="btn btn--primary">${create ? "Tạo kho" : "Mở khóa"}</button></div>
+    </form>`);
+  select('[name="passphrase"]').focus();
 }
 
-function showDetail(id, preserveReveal = false) {
-  const account = accounts.find((item) => item.id === id);
+function showAccountForm(account) {
+  state.detailId = account?.id || null;
+  const options = Object.entries(twoFactorLabels).map(([value, label]) =>
+    `<option value="${value}" ${account?.twoFactor === value ? "selected" : ""}>${label}</option>`).join("");
+  openDialog(account ? "Sửa tài khoản" : "Thêm tài khoản", `
+    <form class="dialog-form" id="account-form" autocomplete="off">
+      <label class="form-field"><span>Tên dịch vụ</span><input name="name" maxlength="160" value="${escapeHtml(account?.name || "")}" required></label>
+      <label class="form-field"><span>Trang web (không bắt buộc)</span><input name="domain" maxlength="2048" value="${escapeHtml(account?.domain || "")}" inputmode="url"></label>
+      <label class="form-field"><span>Tên đăng nhập hoặc email</span><input name="user" maxlength="320" value="${escapeHtml(account?.user || "")}" required></label>
+      <label class="form-field"><span>${account ? "Mật khẩu mới (nếu cần đổi)" : "Mật khẩu"}</span><input name="password" autocomplete="new-password" type="password" ${account ? "" : "required"}></label>
+      <label class="form-field"><span>Xác thực hai yếu tố (2FA)</span><select name="twoFactor">${options}</select></label>
+      <p class="form-error" role="alert"></p>
+      <div class="actions"><button type="submit" class="btn btn--primary">Lưu tài khoản</button><button type="button" class="btn btn--secondary" data-action="close">Hủy</button></div>
+    </form>`);
+  select('[name="name"]').focus();
+}
+
+function showLoginHistory(account) {
+  state.detailId = account.id;
+  state.revealed = false;
+  const provider = activityProvider(account);
+  const entries = [...(account.loginHistory || [])].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const dateFormat = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
+  const rows = entries.map(entry => `
+    <li>
+      <div class="login-summary"><time datetime="${escapeHtml(entry.at)}">${dateFormat.format(new Date(entry.at))}</time>
+        ${entry.unrecognized ? badge("Cần xác minh", "warn", "alert") : ""}</div>
+      <dl class="login-facts">
+        <dt>Địa điểm</dt><dd>${escapeHtml(entry.place || "Chưa rõ")}</dd>
+        <dt>Thiết bị</dt><dd>${escapeHtml(entry.device || "Chưa rõ")}</dd>
+        <dt>Nguồn</dt><dd>${entry.source === "github" ? "Nhật ký GitHub" : "Ghi chú thủ công trước đây"}</dd>
+      </dl>
+      <button class="text-link login-review" type="submit" data-action="review-login" data-entry="${escapeHtml(entry.id)}">${entry.unrecognized ? "Tôi nhận ra lần này" : "Đánh dấu là đăng nhập lạ"}</button>
+    </li>`).join("");
+  openDialog("Lịch sử đăng nhập", `
+    <div class="detail-service">${serviceMark(account)}<div><strong>${escapeHtml(account.name)}</strong><p>${escapeHtml(account.user)}</p></div></div>
+    <div class="actions">
+      ${provider ? `<a class="btn btn--primary" href="${escapeHtml(provider.url)}" target="_blank" rel="noopener noreferrer">Xem hoạt động trên ${escapeHtml(provider.name)}<span class="sr-only"> (mở thẻ mới)</span></a>` : ""}
+      <button type="button" class="btn btn--secondary" data-action="detail" data-account="${escapeHtml(account.id)}">Về tài khoản</button>
+    </div>
+    ${provider?.name === "GitHub" ? `<details class="login-import"><summary>Nhập nhật ký từ GitHub</summary>
+      <form class="dialog-form" id="github-log-form">
+        <p class="form-help">Trong Security log của GitHub, chọn <strong>Export</strong> rồi chọn <strong>JSON</strong>. Tên đăng nhập đã lưu trong CredBox phải khớp với tên người dùng GitHub.</p>
+        <label class="form-field"><span>Tệp nhật ký JSON</span><input type="file" name="logFile" accept=".json,application/json" required></label>
+        <p class="form-error" role="alert"></p>
+        <button type="submit" class="btn btn--secondary">Nhập lịch sử</button>
+      </form></details>` : ""}
+    ${entries.some(entry => entry.unrecognized) ? '<p class="login-warning tone-warn">Có lần đăng nhập được đánh dấu lạ. Hãy kiểm tra thiết bị và vị trí trong mục bảo mật của dịch vụ.</p>' : ""}
+    ${entries.length ? `<form id="review-login-form"><input type="hidden" name="entryId">
+      <ol class="login-list" aria-label="Các lần đăng nhập, mới nhất trước">${rows}</ol>
+      <p class="form-error" role="alert"></p></form>` : '<p class="login-empty">Chưa có nhật ký trong kho. Bạn có thể kiểm tra hoạt động đăng nhập trong phần bảo mật của dịch vụ.</p>'}`);
+  select("#dialog-content .actions > :first-child").focus();
+}
+
+function showDetail(id) {
+  const account = accounts.find(item => item.id === id);
   if (!account) return;
-  if (!preserveReveal) state.revealed = false;
+  state.revealed = false;
   state.detailId = id;
   const info = accountStatus(account);
-  const usedBy = info.reusedWith.map((item) => item.name).join(", ");
-  const options = Object.entries(twoFactorLabels).map(([value, label]) =>
-    `<option value="${value}" ${account.twoFactor === value ? "selected" : ""}>${label}</option>`
-  ).join("");
+  const usedBy = info.reusedWith.map(item => item.name).join(", ");
   openDialog(account.name, `
-    <div class="detail-service">${serviceMark(account)}<div><strong>${account.domain}</strong><p>Thông tin đăng nhập trong kho</p></div></div>
+    <div class="detail-service">${serviceMark(account)}<div><strong>${escapeHtml(account.domain || account.name)}</strong><p>Thông tin đăng nhập trong kho</p></div></div>
     <div class="dialog-fields">
-      <div class="field"><span>Tên đăng nhập</span><strong>${account.user}</strong></div>
-      <div class="field"><span>Mật khẩu mẫu</span><span class="password-field">
-        <output id="password-value" aria-live="polite">${state.revealed ? account.password : maskedPassword}</output>
-        <button class="btn icon-button" type="button" data-action="toggle-password" aria-label="${state.revealed ? "Ẩn mật khẩu mẫu" : "Hiện mật khẩu mẫu"}" aria-pressed="${state.revealed}">${icon("eye")}</button>
+      <div class="field"><span>Tên đăng nhập</span><strong>${escapeHtml(account.user)}</strong></div>
+      <div class="field"><span>Mật khẩu</span><span class="password-field">
+        <output id="password-value" aria-live="polite">${maskedPassword}</output>
+        <button class="btn icon-button" type="button" data-action="toggle-password" aria-label="Hiện mật khẩu" aria-pressed="false">${icon("eye")}</button>
       </span></div>
     </div>
     <div class="detail-checks">
-      <div><span>Độ mạnh mẫu</span>${info.weak ? badge("Yếu", "warn") : badge("Mạnh", "ok")}</div>
+      <div><span>Độ dài mật khẩu</span>${info.weak ? badge("Dưới 14 ký tự", "warn") : badge("Từ 14 ký tự", "ok")}</div>
       <div><span>Mật khẩu dùng lại</span>${usedBy ? badge("Trùng với " + usedBy, "warn") : badge("Không trùng trong kho", "ok")}</div>
-      ${id === "forum" ? '<div><span>Sự cố tại dịch vụ</span>' + (info.incident ? badge("Cần xử lý", "risk") : badge("Đã ghi nhận đổi", "ok")) + '</div>' : ""}
+      <div><span>Xác thực hai yếu tố</span>${badge(twoFactorLabels[account.twoFactor], account.twoFactor === "enabled" ? "ok" : "warn")}</div>
     </div>
-    <label class="two-factor-control" for="factor-select"><span>Ghi nhận trạng thái 2FA</span><select id="factor-select">${options}</select></label>
-    ${info.weak || usedBy || info.incident ? '<button class="btn btn--secondary" type="button" data-action="demo-change">Mô phỏng đổi mật khẩu</button>' : ""}`);
+    <div class="actions"><button class="btn btn--primary" type="button" data-action="history">Lịch sử đăng nhập</button>
+      <button class="btn btn--secondary" type="button" data-action="edit">Sửa tài khoản</button>
+      <button class="btn btn--secondary" type="button" data-action="delete">Xóa tài khoản</button></div>`);
 }
 
-function showAbout() {
-  openDialog("Về CredBox", `
-    <p>Phiên bản 1.0.0 · Nhóm 5 · Trường Đại học Công nghệ Thông tin và Truyền thông Việt – Hàn.</p>
-    <p>Ứng dụng hiện dùng tài khoản và bản tin có sẵn để trình bày luồng bảo mật. Các thao tác chỉ thay đổi dữ liệu mẫu trong phiên và được đặt lại khi tải lại trang.</p>
-    <p>Thiết kế sản phẩm dự kiến dùng tiện ích xin phép người dùng khi đăng nhập, kho mã hóa và AI đọc thông báo công khai từ các dịch vụ. Trang này chỉ cung cấp luồng mô phỏng cho những phần đó.</p>
-    <button class="btn btn--secondary" type="button" data-action="close">Đóng</button>`);
+function clearSession() {
+  vaultKey = null;
+  vaultSalt = null;
+  accounts.length = 0;
+  state.detailId = null;
+  state.revealed = false;
+  if (dialog.open) dialog.close();
+  dialogContent.replaceChildren();
+  select("#vault-search").value = "";
+  select("#vault-filter").value = "all";
+  renderAll();
 }
 
-document.addEventListener("click", (event) => {
+function syncSnapshot() {
+  const latest = localStorage.getItem(storageName);
+  if (latest !== snapshot) {
+    snapshot = latest;
+    clearSession();
+  }
+}
+
+async function submitAccess(form) {
+  const passphrase = form.elements.passphrase.value;
+  const previous = snapshot;
+  let session;
+  if (form.elements.confirmation) {
+    if (passphrase !== form.elements.confirmation.value) throw new Error("Hai lần nhập mật khẩu chính chưa khớp.");
+    if (previous !== null) throw new Error("Kho đã được tạo ở thẻ khác. Mở khóa để tiếp tục.");
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const key = await deriveVaultKey(passphrase, salt);
+    session = { key, salt, records: [] };
+    if (!form.isConnected) return;
+    await writeAccounts([], key, salt, null);
+  } else {
+    session = await readAccounts(passphrase, previous);
+    if (localStorage.getItem(storageName) !== previous) throw new Error("Kho đã thay đổi. Mở khóa lại để tiếp tục.");
+  }
+  if (!form.isConnected) return;
+  vaultKey = session.key;
+  vaultSalt = session.salt;
+  accounts.splice(0, accounts.length, ...session.records);
+  renderAll();
+  if (form.dataset.next === "add") showAccountForm();
+  else dialog.close();
+}
+
+async function submitAccount(form) {
+  const current = accounts.find(item => item.id === state.detailId);
+  const records = accounts.slice();
+  let savedId = null;
+  if (form.id === "delete-form") {
+    if (!current) return;
+    records.splice(records.indexOf(current), 1);
+  } else {
+    const fields = new FormData(form);
+    const record = {
+      ...current,
+      id: current?.id || crypto.randomUUID(),
+      name: fields.get("name").trim(), domain: fields.get("domain").trim(),
+      user: fields.get("user").trim(), password: fields.get("password") || current?.password,
+      twoFactor: fields.get("twoFactor")
+    };
+    if (!record.name || !record.user || !record.password || !Object.hasOwn(twoFactorLabels, record.twoFactor)) {
+      throw new Error("Điền tên dịch vụ, tên đăng nhập và mật khẩu để lưu.");
+    }
+    if (current) records.splice(records.indexOf(current), 1);
+    records.unshift(record);
+    savedId = record.id;
+  }
+  await writeAccounts(records, vaultKey, vaultSalt, snapshot);
+  if (!hasOpenVault() || !form.isConnected) return;
+  accounts.splice(0, accounts.length, ...records);
+  select("#vault-search").value = "";
+  select("#vault-filter").value = "all";
+  renderAll();
+  dialog.close();
+  if (savedId) location.hash = "kho-tai-khoan";
+  announce(savedId ? "Đã lưu tài khoản vào kho." : "Đã xóa tài khoản khỏi kho.");
+}
+
+function validLoginEntry(entry) {
+  return entry && typeof entry.id === "string" && entry.id.length > 0 && entry.id.length <= 256 &&
+    typeof entry.at === "string" && Number.isFinite(Date.parse(entry.at)) &&
+    typeof entry.place === "string" && entry.place.length <= 160 &&
+    typeof entry.device === "string" && entry.device.length <= 512 &&
+    typeof entry.unrecognized === "boolean" && (entry.source === undefined || entry.source === "github");
+}
+
+async function submitLoginHistory(form) {
+  const account = accounts.find(item => item.id === state.detailId);
+  if (!account || !hasOpenVault()) throw new Error("Mở khóa và chọn lại tài khoản để tiếp tục.");
+  const previous = snapshot;
+  const fields = new FormData(form);
+  const entries = [...(account.loginHistory || [])];
+  let message;
+  if (form.id === "review-login-form") {
+    const index = entries.findIndex(entry => entry.id === fields.get("entryId"));
+    if (index < 0) throw new Error("Không tìm thấy lần đăng nhập này.");
+    entries[index] = { ...entries[index], unrecognized: !entries[index].unrecognized };
+    message = "Đã cập nhật trạng thái lần đăng nhập.";
+  } else if (form.id === "github-log-form") {
+    const file = fields.get("logFile");
+    if (!file?.size) throw new Error("Chọn tệp JSON đã xuất từ GitHub.");
+    if (file.size > 10 * 1024 * 1024) throw new Error("Tệp lớn hơn 10 MB. Hãy xuất nhật ký theo khoảng ngày ngắn hơn.");
+    const imported = githubLogEntries(await file.text(), account);
+    const ids = new Set(entries.map(entry => entry.id));
+    let added = 0;
+    for (const entry of imported) {
+      if (ids.has(entry.id)) continue;
+      if (!validLoginEntry(entry)) throw new Error("Dữ liệu lần đăng nhập trong tệp không hợp lệ.");
+      entries.push(entry);
+      ids.add(entry.id);
+      added++;
+    }
+    if (!added) {
+      form.querySelector(".form-error").textContent = "Các lần đăng nhập trong tệp đã có trong lịch sử.";
+      return;
+    }
+    message = `Đã ghi thêm ${added} mục từ nhật ký GitHub.`;
+  } else {
+    return;
+  }
+  if (!form.isConnected || !hasOpenVault()) return;
+  const updated = { ...account, loginHistory: entries };
+  const records = accounts.map(item => item.id === account.id ? updated : item);
+  await writeAccounts(records, vaultKey, vaultSalt, previous);
+  if (!form.isConnected || !hasOpenVault()) return;
+  accounts.splice(0, accounts.length, ...records);
+  renderAll();
+  showLoginHistory(updated);
+  announce(message);
+}
+
+document.addEventListener("click", event => {
   const control = event.target.closest("[data-action]");
-  if (!control) return;
+  if (!control || dialog.hasAttribute("aria-busy")) return;
+  const account = accounts.find(item => item.id === (control.dataset.account || state.detailId));
   switch (control.dataset.action) {
-    case "login":
-      showLogin();
+    case "add":
+    case "unlock":
+      openAccess(control.dataset.action === "add");
       break;
-    case "about":
-      showAbout();
+    case "lock":
+      clearSession();
+      announce("Đã khóa kho tài khoản.");
       break;
     case "close":
       dialog.close();
@@ -297,65 +523,60 @@ document.addEventListener("click", (event) => {
     case "detail":
       showDetail(control.dataset.account);
       break;
-    case "skip-login":
-      dialog.close();
-      announce("Tài khoản Spotify chưa được lưu.");
+    case "history":
+      if (account) showLoginHistory(account);
       break;
-    case "save-login":
-      if (accounts.some((account) => account.id === proposedAccount.id)) break;
-      accounts.unshift({ ...proposedAccount });
-      select('[data-action="login"]').innerHTML = icon("check") + " Xem tài khoản vừa lưu";
-      dialog.close();
-      select("#vault-search").value = "";
-      select("#vault-filter").value = "all";
-      renderAll();
-      if (state.route === "kho-tai-khoan") {
-        select('#vault-accounts [data-account="spotify"]').focus();
-      } else {
-        location.hash = "kho-tai-khoan";
-      }
-      announce("Đã lưu tài khoản Spotify mẫu.");
+    case "review-login":
+      control.form.elements.entryId.value = control.dataset.entry;
       break;
-    case "toggle-password": {
-      const account = accounts.find((item) => item.id === state.detailId);
+    case "edit":
+      if (account) showAccountForm(account);
+      break;
+    case "delete":
+      if (!account) break;
+      openDialog("Xóa tài khoản?", `<form id="delete-form" class="dialog-form">
+        <p>Xóa <strong>${escapeHtml(account.name)}</strong> khỏi kho CredBox? Tài khoản tại dịch vụ vẫn hoạt động.</p>
+        <p class="form-error" role="alert"></p>
+        <div class="actions"><button type="button" class="btn btn--secondary" data-action="detail" data-account="${account.id}">Giữ tài khoản</button>
+        <button type="submit" class="btn btn--primary">Xóa khỏi kho</button></div></form>`);
+      break;
+    case "toggle-password":
       if (!account) break;
       state.revealed = !state.revealed;
       select("#password-value").textContent = state.revealed ? account.password : maskedPassword;
       control.setAttribute("aria-pressed", String(state.revealed));
-      control.setAttribute("aria-label", state.revealed ? "Ẩn mật khẩu mẫu" : "Hiện mật khẩu mẫu");
-      break;
-    }
-    case "demo-change": {
-      const account = accounts.find((item) => item.id === state.detailId);
-      if (!account) break;
-      account.password = "MauMoi!7nQ-" + account.id + "-K9";
-      if (account.id === "forum") state.forumPasswordUpdated = true;
-      renderAll();
-      showDetail(account.id);
-      select("#factor-select").focus();
-      break;
-    }
-    case "read-alert":
-      if (state.alertRead) break;
-      state.alertRead = true;
-      renderAll();
-      select('[data-action="read-alert"]').focus();
-      announce("Đã đánh dấu cảnh báo là đã đọc.");
+      control.setAttribute("aria-label", state.revealed ? "Ẩn mật khẩu" : "Hiện mật khẩu");
       break;
   }
 });
 
 select("#vault-search").addEventListener("input", renderVault);
 select("#vault-filter").addEventListener("change", renderVault);
-dialog.addEventListener("change", (event) => {
-  if (event.target.id !== "factor-select") return;
-  const account = accounts.find((item) => item.id === state.detailId);
-  if (account && Object.hasOwn(twoFactorLabels, event.target.value)) {
-    account.twoFactor = event.target.value;
-    renderAll();
+dialog.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (dialog.hasAttribute("aria-busy")) return;
+  const form = event.target;
+  const button = form.querySelector('[type="submit"]');
+  button.disabled = true;
+  dialog.setAttribute("aria-busy", "true");
+  try {
+    if (form.id === "access-form") await submitAccess(form);
+    else if (["review-login-form", "github-log-form"].includes(form.id)) await submitLoginHistory(form);
+    else if (form.id === "account-form" || form.id === "delete-form") await submitAccount(form);
+  } catch (error) {
+    const message = error.name === "QuotaExceededError" ? "Bộ nhớ trình duyệt đã đầy. Thay đổi chưa được lưu."
+      : error.name === "Error" ? error.message : "Không thể đọc hoặc ghi kho. Kiểm tra quyền lưu dữ liệu của trình duyệt.";
+    form.querySelector(".form-error").textContent = message;
+  } finally {
+    dialog.removeAttribute("aria-busy");
+    button.disabled = false;
   }
 });
+dialog.addEventListener("cancel", event => {
+  if (dialog.hasAttribute("aria-busy")) event.preventDefault();
+});
 dialog.addEventListener("close", () => {
+  if (dialog.open) return;
   const closedAccount = state.detailId;
   state.detailId = null;
   state.revealed = false;
@@ -366,7 +587,25 @@ dialog.addEventListener("close", () => {
     (row || view?.querySelector("h1"))?.focus();
   }
 });
+window.addEventListener("storage", event => {
+  if (event.key !== null && event.key !== storageName) return;
+  syncSnapshot();
+});
+window.addEventListener("pagehide", () => {
+  if (hasOpenVault() || dialog.open) clearSession();
+});
+window.addEventListener("pageshow", event => {
+  if (event.persisted) syncSnapshot();
+});
 window.addEventListener("hashchange", () => updateRoute(true));
-renderAll();
-if (location.hash === "#main") history.replaceState(null, "", "#tong-quan");
-updateRoute();
+
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+    snapshot = localStorage.getItem(storageName);
+  } catch {
+    // The access dialog explains how to enable browser storage.
+  }
+  renderAll();
+  if (location.hash === "#main") history.replaceState(null, "", "#tong-quan");
+  updateRoute();
+});

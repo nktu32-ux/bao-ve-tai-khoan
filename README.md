@@ -1,46 +1,35 @@
 # CredBox
 
-Phiên bản 1.0.0
+CredBox là kho tài khoản cá nhân của Nhóm 5 · VKU. Trang **Tổng quan** hiển thị số liệu của kho và có mục **Giới thiệu CredBox**. Kho mới bắt đầu trống.
 
-Kho tài khoản và bảng theo dõi bảo mật của Nhóm 5, học phần Nhập môn ngành và Kỹ năng mềm tại VKU. Bản này là web mẫu dùng dữ liệu soạn sẵn, không lưu mật khẩu thật.
+## Sử dụng
 
-Mở [CredBox trên GitHub Pages](https://nktu32-ux.github.io/bao-ve-tai-khoan/). Bốn mục Tổng quan, Kho tài khoản, Kiểm tra bảo mật và Cảnh báo nằm trong cùng trang `index.html`.
+1. Chọn **Thêm tài khoản** rồi tạo mật khẩu chính để mở kho. Hãy giữ mật khẩu chính ở nơi an toàn vì ứng dụng không có chức năng khôi phục.
+2. Nhập thông tin đăng nhập của dịch vụ và lưu. Vào **Kho tài khoản** để tìm, xem hoặc chỉnh sửa thông tin đã lưu.
+3. Vào **Kiểm tra bảo mật** để xem mật khẩu dưới 14 ký tự, mật khẩu trùng giữa các tài khoản và trạng thái xác thực hai yếu tố. Bạn tự cập nhật trạng thái này sau khi kiểm tra ở dịch vụ.
+4. Mở một tài khoản rồi chọn **Lịch sử đăng nhập**. Mở trang hoạt động của dịch vụ để xem các lần đăng nhập mới nhất. Lịch sử trong kho được mã hóa cùng tài khoản. Bản web hiện chưa đồng bộ tự động với dịch vụ.
+5. Với tài khoản GitHub, lưu đúng tên người dùng GitHub trong kho. Xuất tệp JSON từ Security log và chọn **Nhập nhật ký từ GitHub** trong lịch sử tài khoản. CredBox đọc tệp trên máy, lọc các sự kiện đăng nhập của tên người dùng đó và bỏ qua mục đã nhập. [Hướng dẫn xuất nhật ký của GitHub](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/reviewing-your-security-log#exporting-your-security-log)
+6. **Cảnh báo** liệt kê các tài khoản có lần đăng nhập cần xác minh, mật khẩu ngắn hoặc dùng lại. Khi thấy thiết bị lạ, hãy kiểm tra phiên tại dịch vụ. Nếu nhận ra lần đăng nhập đó, chọn **Tôi nhận ra lần này** trong lịch sử. Nếu cần đổi mật khẩu, hãy đổi tại dịch vụ rồi cập nhật bản lưu trong CredBox.
+7. Chọn **Khóa kho** khi dùng xong. Khi tải lại trang, nhập mật khẩu chính để mở kho.
 
-## Luồng trình bày trong index.html
+Dữ liệu được mã hóa và lưu riêng trong trình duyệt tại địa chỉ web bạn đang sử dụng. Xóa dữ liệu của trang sẽ xóa cả kho. Trình duyệt khác, thiết bị khác hoặc địa chỉ web khác có kho riêng.
 
-1. Chọn **Mô phỏng đăng nhập**. Chọn **Không lưu** để thấy kho giữ nguyên, hoặc **Cho phép lưu** để thêm Spotify.
-2. Mở **Kho tài khoản**, tìm và mở Facebook hoặc Diễn đàn Sinh viên. Hai tài khoản này dùng chung một mật khẩu. Mật khẩu được che cho đến khi bấm hiện.
-3. Mở **Kiểm tra bảo mật** để xem thứ tự xử lý. Trong chi tiết tài khoản, chọn trạng thái 2FA bạn đã tự xác nhận.
-4. Mở **Cảnh báo**, đọc bản tin sự cố giả lập và phần tóm tắt AI soạn sẵn. Chọn **Xem tài khoản**, rồi **Mô phỏng đổi mật khẩu**.
-5. Tải lại trang để về tình huống ban đầu.
+## Mở trên máy bằng Arch Linux
 
-## Cách mở
-
-- **Mở file trực tiếp:** bấm đúp `index.html`. Các thao tác với dữ liệu mẫu chạy được, một số hiệu ứng chỉ bật khi mở qua HTTP.
-- **Qua HTTP (nên dùng):** đăng lên GitHub Pages, hoặc chạy lệnh dưới đây trong Terminal trên máy:
+Mở Terminal (cửa sổ nhập lệnh) trong thư mục dự án có chứa thư mục `website`. Nếu máy đã có Python 3, chạy lệnh sau bằng tài khoản bình thường.
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1 --directory /home/beth/t3code/doan1/lamtrangweb/website
+python3 -m http.server 8000 --bind 127.0.0.1 --directory website
 ```
 
-- `python3 -m http.server` chạy máy chủ web tĩnh có sẵn trong Python. Lệnh chỉ đọc file để gửi cho trình duyệt, không sửa file và không cài gì thêm.
-- `8000` là cổng. Địa chỉ mở trong trình duyệt là http://127.0.0.1:8000.
-- `--bind 127.0.0.1` chỉ cho chính máy của bạn truy cập, máy khác trong mạng không vào được.
-- `--directory ...` là thư mục chứa web, nên bạn chạy lệnh ở thư mục nào cũng được. Dấu `/` ở đầu đường dẫn nghĩa là tính từ gốc ổ đĩa.
+- `python3` chạy Python. Tùy chọn `-m` yêu cầu Python chạy mô-đun có tên `http.server`, chương trình phục vụ các tệp web có sẵn.
+- `8000` là cổng để trình duyệt kết nối. `--bind 127.0.0.1` chỉ cho phép truy cập từ chính máy đang chạy lệnh.
+- `--directory website` chọn thư mục chứa các tệp web, tính từ thư mục hiện tại.
 
-Khi chạy được, Terminal hiện dòng `Serving HTTP on 127.0.0.1 port 8000`. Bấm Ctrl+C trong Terminal để dừng máy chủ.
+Khi Terminal hiện `Serving HTTP`, mở [CredBox trên máy](http://127.0.0.1:8000) trong trình duyệt. Bạn sẽ thấy trang Tổng quan. Để kiểm tra việc lưu, thêm một tài khoản, tải lại trang rồi mở khóa và tìm lại tài khoản vừa thêm. Nhấn **Ctrl+C** trong Terminal để dừng máy chủ. Lần sau hãy dùng cùng trình duyệt và địa chỉ này để mở lại kho.
 
-## Phạm vi phiên bản
-
-Bản 1.0.0 trình bày giao diện và luồng thao tác bằng dữ liệu giả, gồm cả tên đăng nhập `sv.nhom5`. Bản này chưa có:
-
-- ô nhập mật khẩu thật, tiện ích trình duyệt, kho mã hóa;
-- nhập dữ liệu từ trình quản lý mật khẩu, kết nối dịch vụ, nguồn tin rò rỉ thật.
-
-Độ mạnh mật khẩu chỉ xét độ dài: dưới 14 ký tự là ngắn. Trạng thái 2FA do người dùng chọn. Bản tin sự cố và tóm tắt AI được soạn sẵn. Mọi thay đổi chỉ nằm trong bộ nhớ của trang.
+Nếu đưa lên máy chủ, hãy phục vụ toàn bộ nội dung thư mục `website` qua HTTPS để trình duyệt cho phép mã hóa kho.
 
 ## Thành phần và giấy phép
 
-- `index.html` dùng CSS, JavaScript và hiệu ứng của Taste Skill trong `assets/taste/`. Giấy phép MIT nằm ở `assets/Taste-LICENSE`.
-- Font Geist hỗ trợ tiếng Việt và được tải từ `assets/fonts/`, cùng giấy phép SIL OFL.
-- Logo dịch vụ lấy từ bộ SVG Logos (CC0), biểu tượng Lucide (ISC) nằm trực tiếp trong `index.html`. Nguồn từng logo ghi ở `assets/icons/icons-credits.json`. Tên và logo dịch vụ thuộc về chủ sở hữu.
+Phông chữ Geist và giấy phép SIL OFL nằm trong `assets/fonts/`. Biểu tượng giao diện Lucide (ISC) nằm trong `index.html`. Nguồn các logo dịch vụ ghi ở `assets/icons/icons-credits.json`. Tên và logo dịch vụ thuộc về chủ sở hữu.
