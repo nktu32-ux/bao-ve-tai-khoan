@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">CredBox</title>
+  <rect width="64" height="64" rx="15" fill="#152b31"/>
+  <path d="m32 8 20 11.5-8 4.7-12-6.9-12 6.9v15.6l12 6.9 12-6.9 8 4.7L32 56 12 44.5v-25z" fill="#fff8ef"/>
+  <path d="m32 8 20 11.5-8 4.7-12-6.9z" fill="#ffac78"/>
+  <path d="m39 26 10 6-10 6-10-6z" fill="#ffac78"/>
+</svg>
