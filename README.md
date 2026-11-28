@@ -4,13 +4,12 @@ CredBox là kho tài khoản cá nhân của Nhóm 5 · VKU. Trang **Tổng quan
 
 ## Sử dụng
 
-1. Chọn **Thêm tài khoản** rồi tạo mật khẩu chính để mở kho. Hãy giữ mật khẩu chính ở nơi an toàn vì ứng dụng không có chức năng khôi phục.
+1. Chọn **Thêm tài khoản** rồi tạo mật khẩu chính có ít nhất 6 ký tự để mở kho. Hãy giữ mật khẩu chính ở nơi an toàn vì ứng dụng không có chức năng khôi phục.
 2. Nhập thông tin đăng nhập của dịch vụ và lưu. Vào **Kho tài khoản** để tìm, xem hoặc chỉnh sửa thông tin đã lưu.
-3. Vào **Kiểm tra bảo mật** để xem mật khẩu dưới 14 ký tự, mật khẩu trùng giữa các tài khoản và trạng thái xác thực hai yếu tố. Bạn tự cập nhật trạng thái này sau khi kiểm tra ở dịch vụ.
-4. Mở một tài khoản rồi chọn **Lịch sử đăng nhập**. Mở trang hoạt động của dịch vụ để xem các lần đăng nhập mới nhất. Lịch sử trong kho được mã hóa cùng tài khoản. Bản web hiện chưa đồng bộ tự động với dịch vụ.
-5. Với tài khoản GitHub, lưu đúng tên người dùng GitHub trong kho. Xuất tệp JSON từ Security log và chọn **Nhập nhật ký từ GitHub** trong lịch sử tài khoản. CredBox đọc tệp trên máy, lọc các sự kiện đăng nhập của tên người dùng đó và bỏ qua mục đã nhập. [Hướng dẫn xuất nhật ký của GitHub](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/reviewing-your-security-log#exporting-your-security-log)
-6. **Cảnh báo** liệt kê các tài khoản có lần đăng nhập cần xác minh, mật khẩu ngắn hoặc dùng lại. Khi thấy thiết bị lạ, hãy kiểm tra phiên tại dịch vụ. Nếu nhận ra lần đăng nhập đó, chọn **Tôi nhận ra lần này** trong lịch sử. Nếu cần đổi mật khẩu, hãy đổi tại dịch vụ rồi cập nhật bản lưu trong CredBox.
-7. Chọn **Khóa kho** khi dùng xong. Khi tải lại trang, nhập mật khẩu chính để mở kho.
+3. Vào **Kiểm tra bảo mật** để xem mật khẩu dưới 6 ký tự, mật khẩu trùng giữa các tài khoản và trạng thái xác thực hai yếu tố. Bạn tự cập nhật trạng thái này sau khi kiểm tra ở dịch vụ.
+4. Chọn một tài khoản rồi mở **Lịch sử đăng nhập** để xem các phiên đã lưu của tài khoản đó.
+5. Trong **Cảnh báo**, chọn tài khoản có lần đăng nhập cần xác minh để xem chi tiết.
+6. Chọn **Khóa kho** khi dùng xong. Khi tải lại trang, nhập mật khẩu chính để mở kho.
 
 Dữ liệu được mã hóa và lưu riêng trong trình duyệt tại địa chỉ web bạn đang sử dụng. Xóa dữ liệu của trang sẽ xóa cả kho. Trình duyệt khác, thiết bị khác hoặc địa chỉ web khác có kho riêng.
 

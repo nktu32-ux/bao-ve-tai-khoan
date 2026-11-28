@@ -43,8 +43,8 @@ function badge(label, tone, symbol) {
 
 function accountStatus(account) {
   const reusedWith = accounts.filter(item => item.id !== account.id && item.password === account.password);
-  const weak = [...account.password].length < 14;
-  const unrecognized = account.loginHistory?.some(entry => entry.unrecognized) ?? false;
+  const weak = [...account.password].length < 6;
+  const unrecognized = Boolean(account.loginHistory?.some(entry => entry.unrecognized));
   return { reusedWith, weak, unrecognized, needsReview: unrecognized || weak || reusedWith.length > 0 || account.twoFactor !== "enabled" };
 }
 
@@ -109,7 +109,7 @@ function accountRow(account, label, action = "detail") {
   const { needsReview, unrecognized } = accountStatus(account);
   let status;
   if (unrecognized) status = badge("Đăng nhập cần xác minh", "risk");
-  else if (action === "history") status = badge(`${account.loginHistory?.length || 0} lần ghi nhận`, "info");
+  else if (action === "history") status = badge("Xem lịch sử", "info");
   else status = badge(label || (needsReview ? "Cần kiểm tra" : "Đạt yêu cầu"), needsReview ? "warn" : "ok");
   return `
     <button class="account-row" type="button" data-action="${action}" data-account="${escapeHtml(account.id)}">
@@ -190,7 +190,7 @@ function renderHealth() {
   const checks = [
     ["Lịch sử đăng nhập", "Chọn tài khoản để xem thời gian, thiết bị và địa điểm đăng nhập.", "history", accounts, "history"],
     ["Mật khẩu dùng lại", "Dùng mật khẩu riêng cho từng tài khoản.", "refresh", accounts.filter(a => accountStatus(a).reusedWith.length)],
-    ["Mật khẩu ngắn", "Những mật khẩu trong danh sách này có dưới 14 ký tự.", "lock", accounts.filter(a => accountStatus(a).weak)],
+    ["Mật khẩu ngắn", "Những mật khẩu trong danh sách này có dưới 6 ký tự.", "lock", accounts.filter(a => accountStatus(a).weak)],
     ["Xác thực hai yếu tố", "Bật bước xác minh thứ hai ở dịch vụ rồi cập nhật trạng thái trong kho.", "shield", accounts.filter(a => a.twoFactor !== "enabled")]
   ];
   root.innerHTML = checks.map(([title, description, symbol, records, action]) => `
@@ -209,7 +209,7 @@ function renderAlerts() {
     const { weak, reusedWith, unrecognized } = accountStatus(account);
     if (weak || reusedWith.length || unrecognized) {
       const label = weak && reusedWith.length ? "Ngắn và dùng lại" : weak ? "Mật khẩu ngắn" : "Dùng lại mật khẩu";
-      warnings.push(accountRow(account, label));
+      warnings.push(accountRow(account, label, unrecognized ? "history" : "detail"));
     }
   }
   select("#alerts-content").innerHTML = '<div class="panel">' + (warnings.length ? warnings.join("")
@@ -254,6 +254,7 @@ function updateRoute(moveFocus = false) {
 
 function announce(message) {
   const notice = select("#notice");
+  (dialog.open ? dialog : document.body).append(notice);
   notice.textContent = message;
   clearTimeout(noticeTimer);
   noticeTimer = setTimeout(() => { notice.textContent = ""; }, 3700);
@@ -283,7 +284,7 @@ function openAccess(addAfterUnlock) {
       <p class="form-help">${create
         ? "Đặt mật khẩu chính để mã hóa kho trên trình duyệt này. Hãy ghi nhớ mật khẩu vì CredBox không thể cấp lại."
         : "Nhập mật khẩu chính để mở kho đã lưu trong trình duyệt này."}</p>
-      <label class="form-field"><span>Mật khẩu chính</span><input name="passphrase" type="password" autocomplete="${create ? "new-password" : "current-password"}" ${create ? 'minlength="12" placeholder="Ít nhất 12 ký tự"' : ""} required></label>
+      <label class="form-field"><span>Mật khẩu chính</span><input name="passphrase" type="password" autocomplete="${create ? "new-password" : "current-password"}" ${create ? 'minlength="6" placeholder="Ít nhất 6 ký tự"' : ""} required></label>
       ${create ? '<label class="form-field"><span>Nhập lại mật khẩu chính</span><input name="confirmation" type="password" autocomplete="new-password" required></label>' : ""}
       <p class="form-error" role="alert"></p>
       <div class="actions"><button type="submit" class="btn btn--primary">${create ? "Tạo kho" : "Mở khóa"}</button></div>
@@ -308,40 +309,28 @@ function showAccountForm(account) {
   select('[name="name"]').focus();
 }
 
-function showLoginHistory(account) {
-  state.detailId = account.id;
-  state.revealed = false;
-  const provider = activityProvider(account);
+function loginHistoryRows(account) {
   const entries = [...(account.loginHistory || [])].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const dateFormat = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" });
-  const rows = entries.map(entry => `
+  return entries.map(entry => `
     <li>
       <div class="login-summary"><time datetime="${escapeHtml(entry.at)}">${dateFormat.format(new Date(entry.at))}</time>
-        ${entry.unrecognized ? badge("Cần xác minh", "warn", "alert") : ""}</div>
+        ${entry.unrecognized ? badge("Địa điểm lạ", "warn", "alert") : ""}</div>
       <dl class="login-facts">
         <dt>Địa điểm</dt><dd>${escapeHtml(entry.place || "Chưa rõ")}</dd>
         <dt>Thiết bị</dt><dd>${escapeHtml(entry.device || "Chưa rõ")}</dd>
-        <dt>Nguồn</dt><dd>${entry.source === "github" ? "Nhật ký GitHub" : "Ghi chú thủ công trước đây"}</dd>
+        <dt>Nguồn</dt><dd>${entry.source === "github" ? "Nhật ký GitHub đã lưu" : "Ghi chú đã lưu"}</dd>
       </dl>
-      <button class="text-link login-review" type="submit" data-action="review-login" data-entry="${escapeHtml(entry.id)}">${entry.unrecognized ? "Tôi nhận ra lần này" : "Đánh dấu là đăng nhập lạ"}</button>
     </li>`).join("");
+}
+
+function showLoginHistory(account) {
+  state.detailId = account.id;
+  state.revealed = false;
   openDialog("Lịch sử đăng nhập", `
     <div class="detail-service">${serviceMark(account)}<div><strong>${escapeHtml(account.name)}</strong><p>${escapeHtml(account.user)}</p></div></div>
-    <div class="actions">
-      ${provider ? `<a class="btn btn--primary" href="${escapeHtml(provider.url)}" target="_blank" rel="noopener noreferrer">Xem hoạt động trên ${escapeHtml(provider.name)}<span class="sr-only"> (mở thẻ mới)</span></a>` : ""}
-      <button type="button" class="btn btn--secondary" data-action="detail" data-account="${escapeHtml(account.id)}">Về tài khoản</button>
-    </div>
-    ${provider?.name === "GitHub" ? `<details class="login-import"><summary>Nhập nhật ký từ GitHub</summary>
-      <form class="dialog-form" id="github-log-form">
-        <p class="form-help">Trong Security log của GitHub, chọn <strong>Export</strong> rồi chọn <strong>JSON</strong>. Tên đăng nhập đã lưu trong CredBox phải khớp với tên người dùng GitHub.</p>
-        <label class="form-field"><span>Tệp nhật ký JSON</span><input type="file" name="logFile" accept=".json,application/json" required></label>
-        <p class="form-error" role="alert"></p>
-        <button type="submit" class="btn btn--secondary">Nhập lịch sử</button>
-      </form></details>` : ""}
-    ${entries.some(entry => entry.unrecognized) ? '<p class="login-warning tone-warn">Có lần đăng nhập được đánh dấu lạ. Hãy kiểm tra thiết bị và vị trí trong mục bảo mật của dịch vụ.</p>' : ""}
-    ${entries.length ? `<form id="review-login-form"><input type="hidden" name="entryId">
-      <ol class="login-list" aria-label="Các lần đăng nhập, mới nhất trước">${rows}</ol>
-      <p class="form-error" role="alert"></p></form>` : '<p class="login-empty">Chưa có nhật ký trong kho. Bạn có thể kiểm tra hoạt động đăng nhập trong phần bảo mật của dịch vụ.</p>'}`);
+    <ol id="login-history-entries" class="login-list" aria-label="Các lần đăng nhập, mới nhất trước">${loginHistoryRows(account)}</ol>
+    <div class="actions"><button type="button" class="btn btn--secondary" data-action="detail" data-account="${escapeHtml(account.id)}">Về tài khoản</button></div>`);
   select("#dialog-content .actions > :first-child").focus();
 }
 
@@ -362,7 +351,7 @@ function showDetail(id) {
       </span></div>
     </div>
     <div class="detail-checks">
-      <div><span>Độ dài mật khẩu</span>${info.weak ? badge("Dưới 14 ký tự", "warn") : badge("Từ 14 ký tự", "ok")}</div>
+      <div><span>Độ dài mật khẩu</span>${info.weak ? badge("Dưới 6 ký tự", "warn") : badge("Từ 6 ký tự", "ok")}</div>
       <div><span>Mật khẩu dùng lại</span>${usedBy ? badge("Trùng với " + usedBy, "warn") : badge("Không trùng trong kho", "ok")}</div>
       <div><span>Xác thực hai yếu tố</span>${badge(twoFactorLabels[account.twoFactor], account.twoFactor === "enabled" ? "ok" : "warn")}</div>
     </div>
@@ -372,6 +361,7 @@ function showDetail(id) {
 }
 
 function clearSession() {
+  select("#notice").textContent = "";
   vaultKey = null;
   vaultSalt = null;
   accounts.length = 0;
@@ -397,6 +387,7 @@ async function submitAccess(form) {
   const previous = snapshot;
   let session;
   if (form.elements.confirmation) {
+    if ([...passphrase].length < 6) throw new Error("Mật khẩu chính cần ít nhất 6 ký tự.");
     if (passphrase !== form.elements.confirmation.value) throw new Error("Hai lần nhập mật khẩu chính chưa khớp.");
     if (previous !== null) throw new Error("Kho đã được tạo ở thẻ khác. Mở khóa để tiếp tục.");
     const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -459,51 +450,6 @@ function validLoginEntry(entry) {
     typeof entry.unrecognized === "boolean" && (entry.source === undefined || entry.source === "github");
 }
 
-async function submitLoginHistory(form) {
-  const account = accounts.find(item => item.id === state.detailId);
-  if (!account || !hasOpenVault()) throw new Error("Mở khóa và chọn lại tài khoản để tiếp tục.");
-  const previous = snapshot;
-  const fields = new FormData(form);
-  const entries = [...(account.loginHistory || [])];
-  let message;
-  if (form.id === "review-login-form") {
-    const index = entries.findIndex(entry => entry.id === fields.get("entryId"));
-    if (index < 0) throw new Error("Không tìm thấy lần đăng nhập này.");
-    entries[index] = { ...entries[index], unrecognized: !entries[index].unrecognized };
-    message = "Đã cập nhật trạng thái lần đăng nhập.";
-  } else if (form.id === "github-log-form") {
-    const file = fields.get("logFile");
-    if (!file?.size) throw new Error("Chọn tệp JSON đã xuất từ GitHub.");
-    if (file.size > 10 * 1024 * 1024) throw new Error("Tệp lớn hơn 10 MB. Hãy xuất nhật ký theo khoảng ngày ngắn hơn.");
-    const imported = githubLogEntries(await file.text(), account);
-    const ids = new Set(entries.map(entry => entry.id));
-    let added = 0;
-    for (const entry of imported) {
-      if (ids.has(entry.id)) continue;
-      if (!validLoginEntry(entry)) throw new Error("Dữ liệu lần đăng nhập trong tệp không hợp lệ.");
-      entries.push(entry);
-      ids.add(entry.id);
-      added++;
-    }
-    if (!added) {
-      form.querySelector(".form-error").textContent = "Các lần đăng nhập trong tệp đã có trong lịch sử.";
-      return;
-    }
-    message = `Đã ghi thêm ${added} mục từ nhật ký GitHub.`;
-  } else {
-    return;
-  }
-  if (!form.isConnected || !hasOpenVault()) return;
-  const updated = { ...account, loginHistory: entries };
-  const records = accounts.map(item => item.id === account.id ? updated : item);
-  await writeAccounts(records, vaultKey, vaultSalt, previous);
-  if (!form.isConnected || !hasOpenVault()) return;
-  accounts.splice(0, accounts.length, ...records);
-  renderAll();
-  showLoginHistory(updated);
-  announce(message);
-}
-
 document.addEventListener("click", event => {
   const control = event.target.closest("[data-action]");
   if (!control || dialog.hasAttribute("aria-busy")) return;
@@ -525,9 +471,6 @@ document.addEventListener("click", event => {
       break;
     case "history":
       if (account) showLoginHistory(account);
-      break;
-    case "review-login":
-      control.form.elements.entryId.value = control.dataset.entry;
       break;
     case "edit":
       if (account) showAccountForm(account);
@@ -561,7 +504,6 @@ dialog.addEventListener("submit", async event => {
   dialog.setAttribute("aria-busy", "true");
   try {
     if (form.id === "access-form") await submitAccess(form);
-    else if (["review-login-form", "github-log-form"].includes(form.id)) await submitLoginHistory(form);
     else if (form.id === "account-form" || form.id === "delete-form") await submitAccount(form);
   } catch (error) {
     const message = error.name === "QuotaExceededError" ? "Bộ nhớ trình duyệt đã đầy. Thay đổi chưa được lưu."
