@@ -163,18 +163,12 @@ dialog::backdrop { background: #132b3199; }
 .form-error { color: #963222; font-size: .9rem; }
 .form-error:empty { display: none; }
 .actions { flex-wrap: wrap; margin-top: 7px; }
-.login-import { margin-top: 15px; border-block: 1px solid var(--line); }
-.login-import summary { padding-block: 12px; cursor: pointer; font-weight: 600; }
-.login-import form { padding-bottom: 16px; }
 .login-list { list-style: none; margin: 16px 0 0; padding: 0; }
 .login-list li { padding-top: 13px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .login-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-weight: 600; }
 .login-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; margin: 8px 0 0; font-size: .9rem; }
 .login-facts dt { color: var(--muted); }
 .login-facts dd { margin: 0; }
-.login-review { padding: 0; border: none; background: transparent; }
-.login-empty, .login-warning { margin-top: 15px; padding: 12px; border-radius: 8px; }
-.login-empty { background: var(--row-hover); }
 .detail-service { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; overflow-wrap: anywhere; }
 .detail-service p { color: var(--muted); font-size: .9rem; }
 .dialog-fields, .detail-checks { display: grid; gap: 8px; margin: 16px 0; }
